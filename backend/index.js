@@ -13,9 +13,14 @@ app.use(cors());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use(cors({
-  origin: 'https://fisiopilattes.netlify.app',
-  credentials: true
+  origin: 'https://fisiopilattes.netlify.app', // Permitir seu domínio
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Permitir métodos
+  allowedHeaders: ['Content-Type', 'Authorization'], // Cabeçalhos permitidos
+  credentials: true // Se for usar cookies/autenticação
 }));
+
+// Middleware para entender JSON
+app.use(express.json());
 
 // Conectar ao banco de dados
 const db = mysql.createConnection({
