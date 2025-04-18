@@ -18,7 +18,7 @@ const ProtectedRoute = ({ element }) => {
     return (
       <Router>
         <Routes>
-          <Route path="/agendarAqui" element={<Home />} />
+          <Route path="/" element={<Home />} />
           <Route path="/entrar" element={<Entrar />} />
           <Route path="/registrar" element={<Registrar />} />
           <Route path="/Conta" element={<Conta />} />
