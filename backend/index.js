@@ -6,22 +6,22 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const path = require('path');
 
-const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
+// Permite CORS com configuração correta
 const corsOptions = {
-  origin: '*',  // Permitir seu domínio
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,  // Se for usar cookies/autenticação
+  origin: 'https://fisiopilattes.netlify.app', // Permitir apenas o domínio específico
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Métodos permitidos
+  allowedHeaders: ['Content-Type', 'Authorization'], // Cabeçalhos permitidos
+  credentials: true, // Se você está usando cookies/autenticação
 };
 
-app.use(cors(corsOptions));
+app.use(cors(corsOptions)); // Configuração de CORS
 
-// Permitir o preflight (OPTIONS)
-app.options('*', cors(corsOptions));  // Configuração de preflight
+// Definir resposta OPTIONS para preflight
+app.options('*', cors(corsOptions));
 
+// Middleware para JSON
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Conectar ao banco de dados
 const db = mysql.createConnection({
