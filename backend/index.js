@@ -425,7 +425,7 @@ app.patch('/api/reset-password/:id', async (req, res) => {
 });
   
 // Inicia o servidor
-const port = process.env.PORT || 4000;
+const port = process.env.PORT || 8080;
 app.listen(port, () => {
   console.log(`Servidor rodando na porta ${port}`);
 });
