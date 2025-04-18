@@ -1,22 +1,27 @@
 const express = require('express');
 const multer = require('multer');
+const cors = require('cors');
 const mysql = require('mysql2');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const path = require('path');
 
-// Permite CORS com configuração correta
-const cors = require('cors');
-const corsOptions ={
-    origin:'http://localhost:3000', 
-    credentials:true,            //access-control-allow-credentials:true
-    optionSuccessStatus:200
-}
-app.use(cors(corsOptions));
-
-// Middleware para JSON
+const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+const corsOptions = {
+  origin: 'http://fisiopilattes.netlify.app',  // Permitir seu domínio
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,  // Se for usar cookies/autenticação
+};
+
+app.use(cors(corsOptions));
+
+// Permitir o preflight (OPTIONS)
+app.options('*', cors(corsOptions));  // Configuração de preflight
+
 
 // Conectar ao banco de dados
 const db = mysql.createConnection({
@@ -420,7 +425,7 @@ app.patch('/api/reset-password/:id', async (req, res) => {
 });
   
 // Inicia o servidor
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 4000;
 app.listen(port, () => {
   console.log(`Servidor rodando na porta ${port}`);
 });
