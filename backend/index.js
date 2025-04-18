@@ -10,12 +10,13 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const corsOptions = {
-  origin: 'https://fisiopilattes.netlify.app',  // Permitir seu domínio
+app.use(cors({
+  origin: '*',  // Permitir qualquer origem
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,  // Se for usar cookies/autenticação
-};
+  credentials: true, 
+}));
+
 
 app.use(cors(corsOptions));
 
