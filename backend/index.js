@@ -8,7 +8,7 @@ const path = require('path');
 // Permite CORS com configuração correta
 const cors = require('cors');
 const corsOptions ={
-    origin:'http://localhost:4000', 
+    origin:'http://localhost:3000', 
     credentials:true,            //access-control-allow-credentials:true
     optionSuccessStatus:200
 }
@@ -420,7 +420,7 @@ app.patch('/api/reset-password/:id', async (req, res) => {
 });
   
 // Inicia o servidor
-const port = process.env.PORT || 4000;
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Servidor rodando na porta ${port}`);
 });
