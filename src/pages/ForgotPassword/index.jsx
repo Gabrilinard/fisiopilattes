@@ -85,7 +85,7 @@ const ForgotPassword = () => {
     console.log("E-mail digitado:", email);
 
     // Chamada para o back-end para obter a ID do usuário com o e-mail fornecido
-    const response = await fetch('https://fisiopilattes-production.up.railway.app/api/forgot-password', {
+    const response = await fetch('https://fisiopilattes.up.railway.app/api/forgot-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
