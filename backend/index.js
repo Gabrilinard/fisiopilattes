@@ -10,14 +10,17 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(cors({
-  origin: 'https://fisiopilattes.netlify.app',
+const corsOptions = {
+  origin: 'https://fisiopilattes.netlify.app',  // Permitir seu domínio
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
+  credentials: true,  // Se for usar cookies/autenticação
+};
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(cors(corsOptions));
+
+// Permitir o preflight (OPTIONS)
+app.options('*', cors(corsOptions));  // Configuração de preflight
 
 
 // Conectar ao banco de dados
