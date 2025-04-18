@@ -120,8 +120,7 @@ const Registro = () => {
       console.error(error);
       alert('Erro ao registrar. Tente novamente.');
     }
-    
-  
+  };  // Corrigido aqui
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -150,7 +149,6 @@ const Registro = () => {
   
     setTelefone(value);
   };
-  
 
   return (
     <Container>
