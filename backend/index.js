@@ -12,6 +12,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+app.use(cors({
+  origin: 'https://fisiopilattes.netlify.app',
+  credentials: true
+}));
+
 // Conectar ao banco de dados
 const db = mysql.createConnection({
   host: 'localhost',
