@@ -108,11 +108,7 @@ const Registro = () => {
     }
   
     try {
-      const response = await axios.post(
-        'https://fisiopilattes.up.railway.app/register',
-        { nome, sobrenome, telefone, email, senha },
-        { withCredentials: true } // Se necessário, para enviar cookies ou credenciais com a requisição
-      );
+      const response = await axios.post('https://fisiopilattes.up.railway.app/register', { nome, sobrenome, telefone, email, senha });
       console.log(response.data); // Verificar a resposta
       alert('Usuário cadastrado com sucesso!');
       navigate('/Entrar');
@@ -120,7 +116,8 @@ const Registro = () => {
       console.error(error);
       alert('Erro ao registrar. Tente novamente.');
     }
-  };  // Corrigido aqui
+  };
+  
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -149,6 +146,7 @@ const Registro = () => {
   
     setTelefone(value);
   };
+  
 
   return (
     <Container>

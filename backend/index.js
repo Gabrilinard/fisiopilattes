@@ -1,23 +1,18 @@
 const express = require('express');
 const multer = require('multer');
-const cors = require('cors');
 const mysql = require('mysql2');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const path = require('path');
 
 // Permite CORS com configuração correta
-const corsOptions = {
-  origin: 'https://fisiopilattes.netlify.app', // Permitir apenas o domínio específico
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Métodos permitidos
-  allowedHeaders: ['Content-Type', 'Authorization'], // Cabeçalhos permitidos
-  credentials: true, // Se você está usando cookies/autenticação
-};
-
-app.use(cors(corsOptions)); // Configuração de CORS
-
-// Definir resposta OPTIONS para preflight
-app.options('*', cors(corsOptions));
+const cors = require('cors');
+const corsOptions ={
+    origin:'http://localhost:4000', 
+    credentials:true,            //access-control-allow-credentials:true
+    optionSuccessStatus:200
+}
+app.use(cors(corsOptions));
 
 // Middleware para JSON
 app.use(express.json());
