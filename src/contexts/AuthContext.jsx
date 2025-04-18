@@ -21,7 +21,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, senha) => {
     try {
-      const { data } = await axios.post('http://fisiopilattes.up.railway.app/login', { email, senha });
+      const { data } = await axios.post('https://fisiopilattes.up.railway.app/login', { email, senha });
       if (data.user) {
         setUser(data.user);
         localStorage.setItem('user', JSON.stringify(data.user));
