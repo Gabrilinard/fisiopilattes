@@ -12,9 +12,11 @@ app.use(express.urlencoded({ extended: true }));
 
 app.options('*', cors({
   origin: 'https://fisiopilattes.netlify.app',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
+
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
