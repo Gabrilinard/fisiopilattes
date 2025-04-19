@@ -10,9 +10,14 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.get('/', (req, res) => {
-  res.send('API funcionando');
-});
+app.options('*', cors({
+  origin: 'https://fisiopilattes.netlify.app',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 // Conectar ao banco de dados
@@ -417,7 +422,7 @@ app.patch('/api/reset-password/:id', async (req, res) => {
 });
   
 // Inicia o servidor
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+const port = process.env.PORT || 4000;
+app.listen(port, () => {
+  console.log(`Servidor rodando na porta ${port}`);
 });

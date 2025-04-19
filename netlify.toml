@@ -1,6 +1,6 @@
 [[redirects]]
 from = “/api/"
-to = “https://fisiopilattes-production.up.railway.app/:splat”
+to = “https://fisiopilattes-production.up.railway.app/scripts/x.js”
 status = 200
 force = true
 headers = {X-From = “Netlify”}
