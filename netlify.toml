@@ -1,4 +1,10 @@
 [[redirects]]
-from = "/*"
-to = "/index.html"
+from = “/api/"
+to = “https://fisiopilattes-production.up.railway.app/:splat”
 status = 200
+force = true
+headers = {X-From = “Netlify”}
+[[headers]]
+for = "/”
+[headers.values]
+Access-Control-Allow-Origin = “*”
