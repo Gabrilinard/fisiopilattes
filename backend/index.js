@@ -16,16 +16,14 @@ app.options('*', cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 
 // Conectar ao banco de dados
 const db = mysql.createConnection({
-  host: 'localhost',
+  host: 'trolley.proxy.rlwy.net',
   user: 'root',
-  password: 'Medusawebby210',
-  database: 'agendamento',
+  password: 'UqRfbsBNIBTFENAQStbwpYQGGEfbyXzB',
+  database: 'railway',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -34,10 +32,10 @@ const db = mysql.createConnection({
 module.exports = db;
 
 const dbCallback = mysql.createConnection({
-  host: 'localhost',
+  host: 'trolley.proxy.rlwy.net',
   user: 'root',
-  password: 'Medusawebby210',
-  database: 'agendamento',
+  password: 'UqRfbsBNIBTFENAQStbwpYQGGEfbyXzB',
+  database: 'railway',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -45,10 +43,10 @@ const dbCallback = mysql.createConnection({
 
 // Instância para promessas
 const dbPromise = mysql.createConnection({
-  host: 'localhost',
+  host: 'trolley.proxy.rlwy.net',
   user: 'root',
-  password: 'Medusawebby210',
-  database: 'agendamento',
+  password: 'UqRfbsBNIBTFENAQStbwpYQGGEfbyXzB',
+  database: 'railway',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
