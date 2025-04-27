@@ -60,7 +60,7 @@ const AdminDashboard = () => {
 
   const buscarUsuariosLogados = async () => {
     try {
-      const response = await axios.get('http://localhost:4000/usuarios/logados'); // Substitua com a rota do seu backend
+      const response = await axios.get('https://apis-fisio-production.up.railway.app/usuarios/logados'); // Substitua com a rota do seu backend
       setUsuariosLogados(response.data);
     } catch (error) {
       console.error('Erro ao buscar usuários logados:', error);
@@ -69,7 +69,7 @@ const AdminDashboard = () => {
 
   const buscarUsuarioPorId = async (id) => {
     try {
-      const response = await axios.get(`http://localhost:4000/usuarios/solicitarDados/${id}`);
+      const response = await axios.get(`https://apis-fisio-production.up.railway.app/usuarios/solicitarDados/${id}`);
       const usuario = response.data;
       setNomeReserva(usuario.nome);
       setSobrenomeReserva(usuario.sobrenome);
@@ -90,7 +90,7 @@ const AdminDashboard = () => {
     }
 
   useEffect(() => {
-    axios.get('http://localhost:4000/reservas')
+    axios.get('https://apis-fisio-production.up.railway.app/reservas')
       .then(response => {
         const reservasData = response.data;
     
@@ -123,7 +123,7 @@ const AdminDashboard = () => {
   }, []);
 
   const atualizarStatus = (id, status) => {
-    axios.patch(`http://localhost:4000/reservas/${id}`, { status })
+    axios.patch(`https://apis-fisio-production.up.railway.app/reservas/${id}`, { status })
       .then(() => {
         setReservas(prevReservas => {
           const updatedReservas = prevReservas.map(reserva =>
@@ -153,7 +153,7 @@ const AdminDashboard = () => {
 
   const removerReserva = (id) => {
     if (window.confirm("Tem certeza que deseja remover esta reserva?")) {
-      axios.delete(`http://localhost:4000/reservas/${id}`)
+      axios.delete(`https://apis-fisio-production.up.railway.app/reservas/${id}`)
         .then(() => {
           const updatedReservas = reservas.filter(reserva => reserva.id !== id);
           setReservas(updatedReservas);
@@ -169,7 +169,7 @@ const AdminDashboard = () => {
       return;
     }
 
-    axios.patch(`http://localhost:4000/reservas/negado/${reserva.id}`, { 
+    axios.patch(`https://apis-fisio-production.up.railway.app/reservas/negado/${reserva.id}`, { 
       status: 'negado', 
       motivoNegacao: motivo 
     })
@@ -198,7 +198,7 @@ const AdminDashboard = () => {
       const horarioFinal = new Date(horarioInicial.getTime() + 60 * 60 * 1000); // Adicionando 1 hora
       const horarioFinalFormatado = `${horarioFinal.getHours().toString().padStart(2, '0')}:${horarioFinal.getMinutes().toString().padStart(2, '0')}`;
 
-      await axios.post('http://localhost:4000/reservas', {
+      await axios.post('https://apis-fisio-production.up.railway.app/reservas', {
         nome: nomeReserva,
         sobrenome: sobrenomeReserva,
         email: emailReserva,

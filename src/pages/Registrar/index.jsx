@@ -108,7 +108,7 @@ const Registro = () => {
     }
   
     try {
-      const response = await axios.post('http://localhost:4000/register', { nome, sobrenome, telefone, email, senha });
+      const response = await axios.post('https://apis-fisio-production.up.railway.app/register', { nome, sobrenome, telefone, email, senha });
       console.log(response.data); // Verificar a resposta
       alert('Usuário cadastrado com sucesso!');
       navigate('/Entrar');
