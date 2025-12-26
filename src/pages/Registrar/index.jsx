@@ -116,13 +116,49 @@ const Registro = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordsMatch, setPasswordsMatch] = useState(true);
-  const [tipoUsuario, setTipoUsuario] = useState('cliente');
-  const [fazParteEmpresa, setFazParteEmpresa] = useState('');
-  const [nomeEmpresa, setNomeEmpresa] = useState('');
+  const [tipoUsuario, setTipoUsuario] = useState('paciente');
   const [tipoProfissional, setTipoProfissional] = useState('');
+  const [especialidadeMedica, setEspecialidadeMedica] = useState('');
   const [profissaoCustomizada, setProfissaoCustomizada] = useState('');
+  const [numeroConselho, setNumeroConselho] = useState('');
+  const [ufRegiao, setUfRegiao] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  const especialidadesMedicas = [
+    'Clínico Geral',
+    'Oftalmologista',
+    'Cardiologista',
+    'Dermatologista',
+    'Pediatra',
+    'Ginecologista',
+    'Ortopedista',
+    'Neurologista',
+    'Psiquiatra',
+    'Endocrinologista',
+    'Gastroenterologista',
+    'Urologista',
+    'Otorrinolaringologista',
+    'Pneumologista',
+    'Reumatologista',
+    'Oncologista',
+    'Hematologista',
+    'Nefrologista',
+    'Anestesiologista',
+    'Radiologista',
+    'Patologista',
+    'Medicina do Trabalho',
+    'Medicina Esportiva',
+    'Geriatra',
+    'Mastologista',
+    'Proctologista',
+    'Angiologista',
+    'Cirurgião Geral',
+    'Cirurgião Plástico',
+    'Cirurgião Cardiovascular',
+    'Neurocirurgião',
+    'Cirurgião Pediátrico'
+  ];
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -140,20 +176,29 @@ const Registro = () => {
     }
 
     if (tipoUsuario === 'profissional') {
-      if (!fazParteEmpresa) {
-        alert('Por favor, informe se você faz parte de uma empresa.');
-        return;
-      }
-      if (fazParteEmpresa === 'sim' && !nomeEmpresa.trim()) {
-        alert('Por favor, informe o nome da academia ou pilates.');
-        return;
-      }
       if (!tipoProfissional) {
         alert('Por favor, selecione o tipo de profissional.');
         return;
       }
+      if (tipoProfissional === 'medico' && !especialidadeMedica) {
+        alert('Por favor, selecione sua especialidade médica.');
+        return;
+      }
       if (tipoProfissional === 'outros' && !profissaoCustomizada.trim()) {
         alert('Por favor, informe sua profissão.');
+        return;
+      }
+      if (!numeroConselho || !numeroConselho.trim()) {
+        alert('Por favor, informe o número do conselho.');
+        return;
+      }
+      const regexConselho = /^[A-Za-z0-9\s]{3,20}$/;
+      if (!regexConselho.test(numeroConselho.trim())) {
+        alert('Número do conselho inválido. Deve conter entre 3 e 20 caracteres alfanuméricos (ex: CRM 123456).');
+        return;
+      }
+      if (!ufRegiao || !ufRegiao.trim()) {
+        alert('Por favor, selecione a UF/Região.');
         return;
       }
     }
@@ -167,10 +212,11 @@ const Registro = () => {
         senha,
         tipoUsuario,
         ...(tipoUsuario === 'profissional' && {
-          fazParteEmpresa: fazParteEmpresa === 'sim',
-          nomeEmpresa: fazParteEmpresa === 'sim' ? nomeEmpresa : null,
-          tipoProfissional,
-          profissaoCustomizada: tipoProfissional === 'outros' ? profissaoCustomizada : null
+          tipoProfissional: tipoProfissional === 'outros' ? profissaoCustomizada : tipoProfissional,
+          especialidadeMedica: tipoProfissional === 'medico' ? especialidadeMedica : null,
+          profissaoCustomizada: tipoProfissional === 'outros' ? profissaoCustomizada : null,
+          numeroConselho: numeroConselho.trim(),
+          ufRegiao: ufRegiao.trim()
         })
       };
 
@@ -178,16 +224,12 @@ const Registro = () => {
       console.log(response.data);
       alert('Usuário cadastrado com sucesso!');
       
-      // Se for profissional, faz login automático e redireciona para AdminDashboard
-      // Aguarda um pequeno delay para garantir que o registro foi completado no backend
       if (tipoUsuario === 'profissional') {
-        // Aguarda 500ms para garantir que o registro foi completado no banco de dados
         await new Promise(resolve => setTimeout(resolve, 500));
-        const loginSuccess = await login(email, senha);
-        if (loginSuccess) {
+        const userData = await login(email, senha);
+        if (userData) {
           navigate('/AdminDashboard');
         } else {
-          // Se o login automático falhar, redireciona para página de login
           navigate('/Entrar');
         }
       } else {
@@ -241,11 +283,11 @@ const Registro = () => {
                 <RadioInput
                   type="radio"
                   name="tipoUsuario"
-                  value="cliente"
-                  checked={tipoUsuario === 'cliente'}
+                  value="paciente"
+                  checked={tipoUsuario === 'paciente'}
                   onChange={(e) => setTipoUsuario(e.target.value)}
                 />
-                Cliente
+                Paciente
               </RadioLabel>
               <RadioLabel>
                 <RadioInput
@@ -275,45 +317,6 @@ const Registro = () => {
           {tipoUsuario === 'profissional' && (
             <>
               <div>
-                <label style={{ display: 'block', marginBottom: '8px', textAlign: 'left' }}>Faz parte de uma empresa?</label>
-                <RadioGroup>
-                  <RadioLabel>
-                    <RadioInput
-                      type="radio"
-                      name="fazParteEmpresa"
-                      value="sim"
-                      checked={fazParteEmpresa === 'sim'}
-                      onChange={(e) => setFazParteEmpresa(e.target.value)}
-                    />
-                    Sim
-                  </RadioLabel>
-                  <RadioLabel>
-                    <RadioInput
-                      type="radio"
-                      name="fazParteEmpresa"
-                      value="nao"
-                      checked={fazParteEmpresa === 'nao'}
-                      onChange={(e) => {
-                        setFazParteEmpresa(e.target.value);
-                        setNomeEmpresa('');
-                      }}
-                    />
-                    Não
-                  </RadioLabel>
-                </RadioGroup>
-              </div>
-
-              {fazParteEmpresa === 'sim' && (
-                <Input
-                  type="text"
-                  placeholder="Nome da Academia ou Pilates"
-                  value={nomeEmpresa}
-                  onChange={(e) => setNomeEmpresa(e.target.value)}
-                  required
-                />
-              )}
-
-              <div>
                 <label style={{ display: 'block', marginBottom: '8px', textAlign: 'left' }}>Tipo de Profissional:</label>
                 <Select
                   value={tipoProfissional}
@@ -322,17 +325,39 @@ const Registro = () => {
                     if (e.target.value !== 'outros') {
                       setProfissaoCustomizada('');
                     }
+                    if (e.target.value !== 'medico') {
+                      setEspecialidadeMedica('');
+                    }
                   }}
                   required
                 >
                   <option value="">Selecione...</option>
-                  <option value="dono">Dono</option>
-                  <option value="personal">Personal Trainer</option>
-                  <option value="instrutor_pilates">Instrutor de Pilates</option>
+                  <option value="medico">Médico</option>
+                  <option value="dentista">Dentista</option>
+                  <option value="nutricionista">Nutricionista</option>
                   <option value="fisioterapeuta">Fisioterapeuta</option>
+                  <option value="fonoaudiologo">Fonoaudiólogo</option>
                   <option value="outros">Outros</option>
                 </Select>
               </div>
+
+              {tipoProfissional === 'medico' && (
+                <div>
+                  <label>Especialidade Médica:</label>
+                  <Select
+                    value={especialidadeMedica}
+                    onChange={(e) => setEspecialidadeMedica(e.target.value)}
+                    required
+                  >
+                    <option value="">Selecione sua especialidade...</option>
+                    {especialidadesMedicas.map((especialidade) => (
+                      <option key={especialidade} value={especialidade}>
+                        {especialidade}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              )}
 
               {tipoProfissional === 'outros' && (
                 <Input
@@ -343,6 +368,49 @@ const Registro = () => {
                   required
                 />
               )}
+
+              <Input
+                type="text"
+                placeholder="Número do Conselho (ex: CRM 123456)"
+                value={numeroConselho}
+                onChange={(e) => setNumeroConselho(e.target.value)}
+                required
+              />
+
+              <Select
+                value={ufRegiao}
+                onChange={(e) => setUfRegiao(e.target.value)}
+                required
+              >
+                <option value="">Selecione a UF/Região</option>
+                <option value="AC">AC - Acre</option>
+                <option value="AL">AL - Alagoas</option>
+                <option value="AP">AP - Amapá</option>
+                <option value="AM">AM - Amazonas</option>
+                <option value="BA">BA - Bahia</option>
+                <option value="CE">CE - Ceará</option>
+                <option value="DF">DF - Distrito Federal</option>
+                <option value="ES">ES - Espírito Santo</option>
+                <option value="GO">GO - Goiás</option>
+                <option value="MA">MA - Maranhão</option>
+                <option value="MT">MT - Mato Grosso</option>
+                <option value="MS">MS - Mato Grosso do Sul</option>
+                <option value="MG">MG - Minas Gerais</option>
+                <option value="PA">PA - Pará</option>
+                <option value="PB">PB - Paraíba</option>
+                <option value="PR">PR - Paraná</option>
+                <option value="PE">PE - Pernambuco</option>
+                <option value="PI">PI - Piauí</option>
+                <option value="RJ">RJ - Rio de Janeiro</option>
+                <option value="RN">RN - Rio Grande do Norte</option>
+                <option value="RS">RS - Rio Grande do Sul</option>
+                <option value="RO">RO - Rondônia</option>
+                <option value="RR">RR - Roraima</option>
+                <option value="SC">SC - Santa Catarina</option>
+                <option value="SP">SP - São Paulo</option>
+                <option value="SE">SE - Sergipe</option>
+                <option value="TO">TO - Tocantins</option>
+              </Select>
             </>
           )}
           

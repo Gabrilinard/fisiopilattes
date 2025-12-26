@@ -130,7 +130,6 @@ export const OverlayText = styled.div`
   }
 `;
 
-// Footer (Rodapé)
 export const Footer = styled.footer`
   background-color: #333;
   color: white;
@@ -145,12 +144,12 @@ export const Footer = styled.footer`
 `;
 
 export const EmpresasSection = styled.section`
-  padding: 40px 20px;
+  padding: 20px 20px 40px 20px;
   background-color: rgb(227, 228, 222);
-  margin-top: 40px;
+  margin-top: 0px;
 
   @media (max-width: 768px) {
-    padding: 30px 10px;
+    padding: 15px 10px 30px 10px;
   }
 `;
 
@@ -239,6 +238,108 @@ export const VerMaisButton = styled.button`
 
   @media (max-width: 768px) {
     padding: 10px 25px;
+    font-size: 0.9rem;
+  }
+`;
+
+export const TabContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  position: sticky;
+  top: 80px;
+  background-color: rgb(227, 228, 222);
+  padding: 15px 0;
+  z-index: 100;
+  margin-bottom: 20px;
+
+  @media (max-width: 768px) {
+    gap: 10px;
+    top: 70px;
+    padding: 10px 0;
+    margin-bottom: 15px;
+  }
+`;
+
+export const TabButton = styled.button`
+  padding: 12px 30px;
+  background-color: ${props => props.active ? '#4caf50' : 'white'};
+  color: ${props => props.active ? 'white' : '#333'};
+  border: 2px solid ${props => props.active ? '#4caf50' : '#ccc'};
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background-color: ${props => props.active ? '#45a049' : '#f0f0f0'};
+    border-color: ${props => props.active ? '#45a049' : '#999'};
+  }
+
+  @media (max-width: 768px) {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+  }
+`;
+
+export const InscreverButton = styled.button`
+  width: 100%;
+  padding: 10px;
+  margin-top: 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+
+  &:hover {
+    background-color: #0056b3;
+  }
+
+  @media (max-width: 768px) {
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+`;
+
+export const SearchContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+  width: 100%;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+    padding: 0 20px;
+  }
+`;
+
+export const SearchInput = styled.input`
+  width: 100%;
+  padding: 12px 20px;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.3s ease;
+
+  &:focus {
+    border-color: #4caf50;
+  }
+
+  &::placeholder {
+    color: #999;
+  }
+
+  @media (max-width: 768px) {
+    padding: 10px 15px;
     font-size: 0.9rem;
   }
 `;

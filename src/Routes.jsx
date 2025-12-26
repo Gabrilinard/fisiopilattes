@@ -1,12 +1,13 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import Entrar from "./pages/Entrar";
-import Registrar from "./pages/Registrar";
-import Home from "./pages/Home";
-import Conta from "./pages/Conta";
-import Agendar from "./pages/Agendar";
-import AdminDashboard from "./pages/AdminDashboard";
+import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
+import AdminDashboard from "./pages/AdminDashboard";
+import Agendar from "./pages/Agendar";
+import Conta from "./pages/Conta";
+import EmpresasProfissionais from "./pages/EmpresasProfissionais";
+import Entrar from "./pages/Entrar";
 import ForgotPassword from "./pages/ForgotPassword";
+import Home from "./pages/Home";
+import Registrar from "./pages/Registrar";
 import ResetPassword from "./pages/ResetPassword";
 
 const ProtectedRoute = ({ element }) => {
@@ -24,6 +25,7 @@ const ProtectedRoute = ({ element }) => {
           <Route path="/Conta" element={<Conta />} />
           <Route path="/Agendar" element={<Agendar />} />
           <Route path="/AdminDashboard" element={<AdminDashboard />} />
+          <Route path="/profissionais" element={<EmpresasProfissionais />} />
           <Route path="/EsqueciSenha" element={<ForgotPassword />} />
           <Route path="/ResetPassword" element={<ResetPassword />} />
         </Routes>

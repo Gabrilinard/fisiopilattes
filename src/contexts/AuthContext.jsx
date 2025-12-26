@@ -25,12 +25,12 @@ export const AuthProvider = ({ children }) => {
       if (data.user) {
         setUser(data.user);
         localStorage.setItem('user', JSON.stringify(data.user));
-        return true;
+        return data.user;
       }
-      return false;
+      return null;
     } catch (error) {
       console.error('Erro no login:', error);
-      return false;
+      return null;
     }
   };
 
