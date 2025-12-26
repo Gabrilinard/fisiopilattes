@@ -47,7 +47,7 @@ const Agendar = () => {
   };
 
     if (user && user.id) {
-      axios.get(`https://apis-fisio-production.up.railway.app/reservas/${user.id}`)
+      axios.get(`http://localhost:3000/reservas/${user.id}`)
         .then(response => {
           setReservas(response.data);  
         })
@@ -56,7 +56,7 @@ const Agendar = () => {
   
 
   useEffect(() => {
-    axios.get('https://apis-fisio-production.up.railway.app/reservas')
+    axios.get('http://localhost:3000/reservas')
       .then(response => {
         const reservasData = response.data;
     
@@ -89,7 +89,7 @@ const Agendar = () => {
   }, []);
 
   const atualizarStatus = (id, status) => {
-    axios.patch(`https://apis-fisio-production.up.railway.app/reservas/${id}`, { status })
+    axios.patch(`http://localhost:3000/reservas/${id}`, { status })
       .then(() => {
         const updatedReservas = reservas.map(reserva =>
           reserva.id === id ? { ...reserva, status } : reserva
@@ -204,7 +204,7 @@ const handleReserva = async (e) => {
 
   try {
     // Envia a reserva para o backend
-    const response = await axios.post('https://apis-fisio-production.up.railway.app/reservas', {
+    const response = await axios.post('http://localhost:3000/reservas', {
       nome: user.nome,
       sobrenome: user.sobrenome,
       email: user.email,
@@ -251,7 +251,7 @@ const handleReserva = async (e) => {
     }
 
     try {
-        await axios.put(`https://apis-fisio-production.up.railway.app/reservas/solicitar/${id}`, { 
+        await axios.put(`http://localhost:3000/reservas/solicitar/${id}`, { 
             status: 'ausente', 
             motivoFalta: tempo 
         });
@@ -322,7 +322,7 @@ const handleSalvarEdicao = async () => {
     console.log('ID da reserva sendo editada:', reservaId); // Verificar o ID correto
 
     // Usando o ID correto da reserva selecionada
-    const response = await axios.patch(`https://apis-fisio-production.up.railway.app/reservas/editar/${reservaId}`, {
+    const response = await axios.patch(`http://localhost:3000/reservas/editar/${reservaId}`, {
       dia: diaCorrigido,
       horario: novoHorario,
       horarioFinal: novoHorarioFinal,
@@ -393,7 +393,7 @@ const adicionarDiaReserva = () => {
   
     try {
       const enviarReserva = await Promise.all(reservasTemporarias.map(async (reserva) => {
-        await axios.post('https://apis-fisio-production.up.railway.app/reservas', {
+        await axios.post('http://localhost:3000/reservas', {
           nome: user.nome,
           sobrenome: user.sobrenome,
           email: user.email,

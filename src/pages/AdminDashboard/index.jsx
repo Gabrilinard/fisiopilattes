@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
 import axios from 'axios';
-import Footer from '../../components/Footer';
-import { Wrapper, Container, Table, TableWrapper, Th, Td, Button, DaysWrapper, Day, Button_2, Select, Input, Title, Label, DivInputContainer, FormContainer } from './style';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Footer from '../../components/Footer';
 import { useAuth } from "../../contexts/AuthContext";
+import { Button, Button_2, CloseButton, Container, Day, DaysWrapper, DivInputContainer, DrawerContainer, DrawerHeader, DrawerOverlay, DrawerTitle, FormContainer, Input, Label, Select, Table, TableWrapper, Td, Th, Wrapper } from './style';
 
 const AdminDashboard = () => {
   const [nomeReserva, setNomeReserva] = useState('');
@@ -45,10 +45,8 @@ const AdminDashboard = () => {
   };
 
   const formatarTelefone = (telefone) => {
-    // Remove tudo que não for número
     const somenteNumeros = telefone.replace(/\D/g, '');
     
-    // Aplica a máscara no formato "86 99427-3418"
     if (somenteNumeros.length <= 2) {
       return somenteNumeros;
     } else if (somenteNumeros.length <= 7) {
@@ -60,7 +58,7 @@ const AdminDashboard = () => {
 
   const buscarUsuariosLogados = async () => {
     try {
-      const response = await axios.get('https://apis-fisio-production.up.railway.app/usuarios/logados'); // Substitua com a rota do seu backend
+      const response = await axios.get('http://localhost:3000/usuarios/logados'); 
       setUsuariosLogados(response.data);
     } catch (error) {
       console.error('Erro ao buscar usuários logados:', error);
@@ -69,7 +67,7 @@ const AdminDashboard = () => {
 
   const buscarUsuarioPorId = async (id) => {
     try {
-      const response = await axios.get(`https://apis-fisio-production.up.railway.app/usuarios/solicitarDados/${id}`);
+      const response = await axios.get(`http://localhost:3000/usuarios/solicitarDados/${id}`);
       const usuario = response.data;
       setNomeReserva(usuario.nome);
       setSobrenomeReserva(usuario.sobrenome);
@@ -82,7 +80,7 @@ const AdminDashboard = () => {
 
 
   useEffect(() => {
-    buscarUsuariosLogados(); // Chama a função ao carregar o componente
+    buscarUsuariosLogados(); 
   }, []);
 
     if (userId) {
@@ -90,19 +88,18 @@ const AdminDashboard = () => {
     }
 
   useEffect(() => {
-    axios.get('https://apis-fisio-production.up.railway.app/reservas')
+    axios.get('http://localhost:3000/reservas')
       .then(response => {
         const reservasData = response.data;
     
         setReservas(reservasData);
     
-        // Categorize reservas by day
         const reservasDia = reservasData.reduce((acc, reserva) => {
-            const dia = reserva.dia ? reserva.dia.toLowerCase() : ''; // já está em minúsculas
-            const diaCompleto = diasMap[dia];  // Mapeia corretamente para o nome completo
+            const dia = reserva.dia ? reserva.dia.toLowerCase() : ''; 
+            const diaCompleto = diasMap[dia];  
   
           if (diaCompleto) {
-            acc[diaCompleto].push(reserva);  // Adiciona a reserva ao dia correto
+            acc[diaCompleto].push(reserva);  
           }
     
           return acc;
@@ -123,7 +120,7 @@ const AdminDashboard = () => {
   }, []);
 
   const atualizarStatus = (id, status) => {
-    axios.patch(`https://apis-fisio-production.up.railway.app/reservas/${id}`, { status })
+    axios.patch(`http://localhost:3000/reservas/${id}`, { status })
       .then(() => {
         setReservas(prevReservas => {
           const updatedReservas = prevReservas.map(reserva =>
@@ -153,7 +150,7 @@ const AdminDashboard = () => {
 
   const removerReserva = (id) => {
     if (window.confirm("Tem certeza que deseja remover esta reserva?")) {
-      axios.delete(`https://apis-fisio-production.up.railway.app/reservas/${id}`)
+      axios.delete(`http://localhost:3000/reservas/${id}`)
         .then(() => {
           const updatedReservas = reservas.filter(reserva => reserva.id !== id);
           setReservas(updatedReservas);
@@ -169,7 +166,7 @@ const AdminDashboard = () => {
       return;
     }
 
-    axios.patch(`https://apis-fisio-production.up.railway.app/reservas/negado/${reserva.id}`, { 
+    axios.patch(`http://localhost:3000/reservas/negado/${reserva.id}`, { 
       status: 'negado', 
       motivoNegacao: motivo 
     })
@@ -198,7 +195,7 @@ const AdminDashboard = () => {
       const horarioFinal = new Date(horarioInicial.getTime() + 60 * 60 * 1000); // Adicionando 1 hora
       const horarioFinalFormatado = `${horarioFinal.getHours().toString().padStart(2, '0')}:${horarioFinal.getMinutes().toString().padStart(2, '0')}`;
 
-      await axios.post('https://apis-fisio-production.up.railway.app/reservas', {
+      await axios.post('http://localhost:3000/reservas', {
         nome: nomeReserva,
         sobrenome: sobrenomeReserva,
         email: emailReserva,
@@ -233,16 +230,41 @@ const AdminDashboard = () => {
 
   return (
     <Wrapper>
-      <header style={{ backgroundColor: 'black', padding: '10px', color: 'white', display: 'flex', justifyContent: 'flex-end' }}>
-        <Button onClick={handleLogout} style={{ backgroundColor: 'red', color: 'white' }}>
-          Sair
-        </Button>
+      <header style={{ 
+        backgroundColor: 'rgb(227, 228, 222)', 
+        padding: '20px', 
+        position: 'relative'
+      }}>
+        <h2 style={{ 
+          margin: 0, 
+          color: '#333', 
+          textAlign: 'center',
+          marginBottom: '15px'
+        }}>
+          Painel do Administrador
+        </h2>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center'
+        }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <Button_2 onClick={toggleUsuarios}>
+              {showUsuarios ? 'Esconder Usuários' : 'Ver Usuários'}
+            </Button_2>
+            <Button_2 onClick={() => setShowForm(!showForm)}>
+              {showForm ? 'Esconder Reserva' : 'Criar Reserva'}
+            </Button_2>
+            <Button_2 onClick={() => setShowReservas(!showReservas)}>
+              {showReservas ? 'Esconder Reservas' : 'Visualizar Reservas'}
+            </Button_2>
+          </div>
+          <Button onClick={handleLogout} style={{ backgroundColor: 'red', color: 'white' }}>
+            Sair
+          </Button>
+        </div>
       </header>
       <Container>
-        <h2>Painel do Administrador</h2>
-        <Button_2 onClick={toggleUsuarios}>
-          {showUsuarios ? 'Esconder Usuários' : 'Ver Usuários'}
-        </Button_2>
   
         {/* Exibir usuários se o estado `showUsuarios` for true */}
         {showUsuarios && (
@@ -274,100 +296,8 @@ const AdminDashboard = () => {
             </TableWrapper>
           </div>
         )}
-        <div>
-
-      <Button_2 onClick={() => setShowForm(!showForm)}>
-        {showForm ? 'Esconder Reserva' : 'Criar Reserva'}
-      </Button_2>
-
-      {showForm && (
-        <FormContainer>
-          <Title>Criar Reserva</Title>
-
-          <Input
-            type="number"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-            placeholder="ID do Usuário"
-          />
-
-          {userId && (
-            <DivInputContainer>
-              <div>
-                <Label>Nome:</Label>
-                <Input
-                  type="text"
-                  value={nomeReserva}
-                  disabled
-                />
-              </div>
-              <div>
-                <Label>Sobrenome:</Label>
-                <Input
-                  type="text"
-                  value={sobrenomeReserva}
-                  disabled
-                />
-              </div>
-              <div>
-                <Label>Email:</Label>
-                <Input
-                  type="email"
-                  value={emailReserva}
-                  disabled
-                />
-              </div>
-              <div>
-                <Label>Telefone:</Label>
-                <Input
-                  type="text"
-                  value={telefoneReserva}
-                  disabled
-                />
-              </div>
-            </DivInputContainer>
-          )}
-
-          <Select
-            value={diaReserva}
-            onChange={(e) => setDiaReserva(e.target.value)}
-          >
-            <option value="">Selecione o dia</option>
-            <option value="Segunda">Segunda</option>
-            <option value="Terça">Terça</option>
-            <option value="Quarta">Quarta</option>
-            <option value="Quinta">Quinta</option>
-            <option value="Sexta">Sexta</option>
-            <option value="Sábado">Sábado</option>
-            <option value="Domingo">Domingo</option>
-          </Select>
-
-          <Input
-            type="time"
-            value={horarioReserva}
-            onChange={(e) => setHorarioReserva(e.target.value)}
-          />
-
-          <Input
-            type="number"
-            value={qntdPessoas}
-            onChange={(e) => setQntdPessoas(e.target.value)}
-            placeholder="Quantidade de Pessoas"
-          />
-
-          <Button onClick={handleCreateReserva}>
-            Criar Reserva
-          </Button>
-        </FormContainer>
-      )}
-    </div>
         
         <div>
-      {/* Botão para mostrar/esconder as reservas */}
-      <Button_2 onClick={() => setShowReservas(!showReservas)}>
-        {showReservas ? 'Esconder Reservas' : ' Visualizar Reservas'}
-      </Button_2>
-
       {/* Tabela de reservas */}
       {showReservas && (
         <TableWrapper>
@@ -494,6 +424,92 @@ const AdminDashboard = () => {
         </DaysWrapper>
 
       </Container>
+      
+      <DrawerOverlay isOpen={showForm} onClick={() => setShowForm(false)} />
+      <DrawerContainer isOpen={showForm}>
+        <DrawerHeader>
+          <DrawerTitle>Criar Reserva</DrawerTitle>
+          <CloseButton onClick={() => setShowForm(false)}>×</CloseButton>
+        </DrawerHeader>
+        
+        <FormContainer style={{ maxWidth: '100%', boxShadow: 'none', padding: 0 }}>
+          <Input
+            type="number"
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+            placeholder="ID do Usuário"
+          />
+
+          {userId && (
+            <DivInputContainer>
+              <div>
+                <Label>Nome:</Label>
+                <Input
+                  type="text"
+                  value={nomeReserva}
+                  disabled
+                />
+              </div>
+              <div>
+                <Label>Sobrenome:</Label>
+                <Input
+                  type="text"
+                  value={sobrenomeReserva}
+                  disabled
+                />
+              </div>
+              <div>
+                <Label>Email:</Label>
+                <Input
+                  type="email"
+                  value={emailReserva}
+                  disabled
+                />
+              </div>
+              <div>
+                <Label>Telefone:</Label>
+                <Input
+                  type="text"
+                  value={telefoneReserva}
+                  disabled
+                />
+              </div>
+            </DivInputContainer>
+          )}
+
+          <Select
+            value={diaReserva}
+            onChange={(e) => setDiaReserva(e.target.value)}
+          >
+            <option value="">Selecione o dia</option>
+            <option value="Segunda">Segunda</option>
+            <option value="Terça">Terça</option>
+            <option value="Quarta">Quarta</option>
+            <option value="Quinta">Quinta</option>
+            <option value="Sexta">Sexta</option>
+            <option value="Sábado">Sábado</option>
+            <option value="Domingo">Domingo</option>
+          </Select>
+
+          <Input
+            type="time"
+            value={horarioReserva}
+            onChange={(e) => setHorarioReserva(e.target.value)}
+          />
+
+          <Input
+            type="number"
+            value={qntdPessoas}
+            onChange={(e) => setQntdPessoas(e.target.value)}
+            placeholder="Quantidade de Pessoas"
+          />
+
+          <Button onClick={handleCreateReserva} style={{ width: '100%', marginTop: '10px' }}>
+            Criar Reserva
+          </Button>
+        </FormContainer>
+      </DrawerContainer>
+
       <Footer />
     </Wrapper>
   );

@@ -144,3 +144,102 @@ export const Footer = styled.footer`
   }
 `;
 
+export const EmpresasSection = styled.section`
+  padding: 40px 20px;
+  background-color: rgb(227, 228, 222);
+  margin-top: 40px;
+
+  @media (max-width: 768px) {
+    padding: 30px 10px;
+  }
+`;
+
+export const EmpresasTitle = styled.h2`
+  text-align: center;
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: black;
+  font-family: 'Sansita', sans-serif;
+  margin-bottom: 30px;
+
+  @media (max-width: 768px) {
+    font-size: 2rem;
+    margin-bottom: 20px;
+  }
+`;
+
+export const EmpresasGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+`;
+
+export const EmpresaCard = styled.div`
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  @media (max-width: 768px) {
+    padding: 15px;
+  }
+`;
+
+export const EmpresaNome = styled.h3`
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10px;
+  font-family: 'Sansita', sans-serif;
+
+  @media (max-width: 768px) {
+    font-size: 1.3rem;
+  }
+`;
+
+export const EmpresaInfo = styled.p`
+  font-size: 1rem;
+  color: #666;
+  margin: 0;
+
+  @media (max-width: 768px) {
+    font-size: 0.9rem;
+  }
+`;
+
+export const VerMaisButton = styled.button`
+  display: block;
+  margin: 30px auto;
+  padding: 12px 30px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+
+  &:hover {
+    background-color: #45a049;
+  }
+
+  @media (max-width: 768px) {
+    padding: 10px 25px;
+    font-size: 0.9rem;
+  }
+`;
+

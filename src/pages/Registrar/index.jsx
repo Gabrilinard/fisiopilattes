@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import Header from '../../components/Header';
-import Footer from '../../components/Footer';
-import styled from 'styled-components';
+import { useState } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import styled from 'styled-components';
+import Footer from '../../components/Footer';
+import Header from '../../components/Header';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Container = styled.div`
   display: flex;
@@ -44,6 +45,33 @@ const Input = styled.input`
   border: 1px solid #ccc;
   border-radius: 4px;
   width: 100%;
+`;
+
+const Select = styled.select`
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 100%;
+  background-color: white;
+`;
+
+const RadioGroup = styled.div`
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+  margin: 10px 0;
+`;
+
+const RadioLabel = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+`;
+
+const RadioInput = styled.input`
+  cursor: pointer;
 `;
 
 const EyeIcon = styled.div`
@@ -88,12 +116,16 @@ const Registro = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordsMatch, setPasswordsMatch] = useState(true);
+  const [tipoUsuario, setTipoUsuario] = useState('cliente');
+  const [fazParteEmpresa, setFazParteEmpresa] = useState('');
+  const [nomeEmpresa, setNomeEmpresa] = useState('');
+  const [tipoProfissional, setTipoProfissional] = useState('');
+  const [profissaoCustomizada, setProfissaoCustomizada] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleRegister = async (e) => {
     e.preventDefault();
-  
-    console.log({ nome, sobrenome, telefone, email, senha }); // Verificar os dados
   
     const senhaValida = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
   
@@ -106,15 +138,64 @@ const Registro = () => {
       alert('As senhas não coincidem!');
       return;
     }
+
+    if (tipoUsuario === 'profissional') {
+      if (!fazParteEmpresa) {
+        alert('Por favor, informe se você faz parte de uma empresa.');
+        return;
+      }
+      if (fazParteEmpresa === 'sim' && !nomeEmpresa.trim()) {
+        alert('Por favor, informe o nome da academia ou pilates.');
+        return;
+      }
+      if (!tipoProfissional) {
+        alert('Por favor, selecione o tipo de profissional.');
+        return;
+      }
+      if (tipoProfissional === 'outros' && !profissaoCustomizada.trim()) {
+        alert('Por favor, informe sua profissão.');
+        return;
+      }
+    }
   
     try {
-      const response = await axios.post('https://apis-fisio-production.up.railway.app/register', { nome, sobrenome, telefone, email, senha });
-      console.log(response.data); // Verificar a resposta
+      const dadosRegistro = {
+        nome,
+        sobrenome,
+        telefone,
+        email,
+        senha,
+        tipoUsuario,
+        ...(tipoUsuario === 'profissional' && {
+          fazParteEmpresa: fazParteEmpresa === 'sim',
+          nomeEmpresa: fazParteEmpresa === 'sim' ? nomeEmpresa : null,
+          tipoProfissional,
+          profissaoCustomizada: tipoProfissional === 'outros' ? profissaoCustomizada : null
+        })
+      };
+
+      const response = await axios.post('http://localhost:3000/register', dadosRegistro);
+      console.log(response.data);
       alert('Usuário cadastrado com sucesso!');
-      navigate('/Entrar');
+      
+      // Se for profissional, faz login automático e redireciona para AdminDashboard
+      // Aguarda um pequeno delay para garantir que o registro foi completado no backend
+      if (tipoUsuario === 'profissional') {
+        // Aguarda 500ms para garantir que o registro foi completado no banco de dados
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const loginSuccess = await login(email, senha);
+        if (loginSuccess) {
+          navigate('/AdminDashboard');
+        } else {
+          // Se o login automático falhar, redireciona para página de login
+          navigate('/Entrar');
+        }
+      } else {
+        navigate('/Entrar');
+      }
     } catch (error) {
       console.error(error);
-      alert('Erro ao registrar. Tente novamente.');
+      alert(error.response?.data?.error || 'Erro ao registrar. Tente novamente.');
     }
   };
   
@@ -137,7 +218,6 @@ const Registro = () => {
   
     if (value.length > 11) value = value.slice(0, 11); // Limita a 11 números
   
-    // Aplica a formatação (XX 9XXXX-XXXX)
     if (value.length > 2 && value.length <= 7) {
       value = `${value.slice(0, 2)} ${value.slice(2)}`;
     } else if (value.length > 7) {
@@ -154,6 +234,32 @@ const Registro = () => {
       <Content>
         <h2>Registrar-se</h2>
         <Form onSubmit={handleRegister}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', textAlign: 'left' }}>Tipo de Usuário:</label>
+            <RadioGroup>
+              <RadioLabel>
+                <RadioInput
+                  type="radio"
+                  name="tipoUsuario"
+                  value="cliente"
+                  checked={tipoUsuario === 'cliente'}
+                  onChange={(e) => setTipoUsuario(e.target.value)}
+                />
+                Cliente
+              </RadioLabel>
+              <RadioLabel>
+                <RadioInput
+                  type="radio"
+                  name="tipoUsuario"
+                  value="profissional"
+                  checked={tipoUsuario === 'profissional'}
+                  onChange={(e) => setTipoUsuario(e.target.value)}
+                />
+                Profissional
+              </RadioLabel>
+            </RadioGroup>
+          </div>
+
           <Input type="text" placeholder="Nome" value={nome} onChange={(e) => setNome(e.target.value)} required />
           <Input type="text" placeholder="Sobrenome" value={sobrenome} onChange={(e) => setSobrenome(e.target.value)} required />
           <Input
@@ -165,6 +271,80 @@ const Registro = () => {
             required
             />
           <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+
+          {tipoUsuario === 'profissional' && (
+            <>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', textAlign: 'left' }}>Faz parte de uma empresa?</label>
+                <RadioGroup>
+                  <RadioLabel>
+                    <RadioInput
+                      type="radio"
+                      name="fazParteEmpresa"
+                      value="sim"
+                      checked={fazParteEmpresa === 'sim'}
+                      onChange={(e) => setFazParteEmpresa(e.target.value)}
+                    />
+                    Sim
+                  </RadioLabel>
+                  <RadioLabel>
+                    <RadioInput
+                      type="radio"
+                      name="fazParteEmpresa"
+                      value="nao"
+                      checked={fazParteEmpresa === 'nao'}
+                      onChange={(e) => {
+                        setFazParteEmpresa(e.target.value);
+                        setNomeEmpresa('');
+                      }}
+                    />
+                    Não
+                  </RadioLabel>
+                </RadioGroup>
+              </div>
+
+              {fazParteEmpresa === 'sim' && (
+                <Input
+                  type="text"
+                  placeholder="Nome da Academia ou Pilates"
+                  value={nomeEmpresa}
+                  onChange={(e) => setNomeEmpresa(e.target.value)}
+                  required
+                />
+              )}
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', textAlign: 'left' }}>Tipo de Profissional:</label>
+                <Select
+                  value={tipoProfissional}
+                  onChange={(e) => {
+                    setTipoProfissional(e.target.value);
+                    if (e.target.value !== 'outros') {
+                      setProfissaoCustomizada('');
+                    }
+                  }}
+                  required
+                >
+                  <option value="">Selecione...</option>
+                  <option value="dono">Dono</option>
+                  <option value="personal">Personal Trainer</option>
+                  <option value="instrutor_pilates">Instrutor de Pilates</option>
+                  <option value="fisioterapeuta">Fisioterapeuta</option>
+                  <option value="outros">Outros</option>
+                </Select>
+              </div>
+
+              {tipoProfissional === 'outros' && (
+                <Input
+                  type="text"
+                  placeholder="Digite sua profissão"
+                  value={profissaoCustomizada}
+                  onChange={(e) => setProfissaoCustomizada(e.target.value)}
+                  required
+                />
+              )}
+            </>
+          )}
           
           <InputWrapper>
             <Input

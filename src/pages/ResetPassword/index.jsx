@@ -59,7 +59,7 @@ const ResetPassword = () => {
   
     console.log(`ID: ${id}, Senha: ${senha}`); // Verifique no console se os valores estão corretos
   
-    const response = await fetch(`https://apis-fisio-production.up.railway.app/api/reset-password/${id}`, {
+    const response = await fetch(`http://localhost:3000/api/reset-password/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ senha }),

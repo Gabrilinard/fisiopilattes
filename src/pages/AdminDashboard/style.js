@@ -77,16 +77,16 @@ export const Button = styled.button`
 `;
 
 export const Button_2 = styled.button`
-  padding: 12px 20px;
+  padding: 10px 24px;
   background-color: #4caf50;
   color: #fff;
-  margin-top: 40px;
-  margin: 10px;
+  margin: 0;
   border: none;
-  border-radius: 5px;
-  font-size: 16px;
+  border-radius: 8px;
+  font-size: 15px;
   cursor: pointer;
-  width: 25%; /* Largura padrão para telas grandes */
+  width: auto;
+  min-width: 160px;
   transition: background-color 0.3s ease;
 
   &:hover {
@@ -172,4 +172,63 @@ export const Label = styled.label`
 export const DivInputContainer = styled.div`
   width: 100%;
   margin-bottom: 20px;
+`;
+
+export const DrawerOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: ${props => props.isOpen ? 'block' : 'none'};
+`;
+
+export const DrawerContainer = styled.div`
+  position: fixed;
+  top: 0;
+  right: ${props => props.isOpen ? '0' : '-400px'};
+  width: 400px;
+  height: 100vh;
+  background-color: white;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+  z-index: 1001;
+  transition: right 0.3s ease-in-out;
+  overflow-y: auto;
+  padding: 20px;
+`;
+
+export const DrawerHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #ccc;
+`;
+
+export const DrawerTitle = styled.h2`
+  margin: 0;
+  color: #333;
+`;
+
+export const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+
+  &:hover {
+    background-color: #f0f0f0;
+    color: #333;
+  }
 `;
