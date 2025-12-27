@@ -187,6 +187,9 @@ const Registro = () => {
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
   const [cidade, setCidade] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [publicoAtendido, setPublicoAtendido] = useState('');
+  const [modalidade, setModalidade] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
   const { success, error: showError } = useNotification();
@@ -432,6 +435,18 @@ const Registro = () => {
         showError('Por favor, selecione sua cidade no mapa.');
         return;
       }
+      if (!descricao || !descricao.trim()) {
+        showError('Por favor, preencha a descrição.');
+        return;
+      }
+      if (!publicoAtendido || !publicoAtendido.trim()) {
+        showError('Por favor, selecione o público atendido.');
+        return;
+      }
+      if (!modalidade || !modalidade.trim()) {
+        showError('Por favor, selecione a modalidade.');
+        return;
+      }
     }
   
     try {
@@ -452,15 +467,12 @@ const Registro = () => {
           ufRegiao: ufRegiao.trim(),
           latitude: latitude,
           longitude: longitude,
-          cidade: cidade.trim()
+          cidade: cidade.trim(),
+          descricao: descricao.trim(),
+          publicoAtendido: publicoAtendido.trim(),
+          modalidade: modalidade
         })
       };
-
-      console.log('=== DADOS ENVIADOS PARA O BACKEND ===');
-      console.log('tipoUsuario do state:', tipoUsuario);
-      console.log('tipoUsuarioFinal que será enviado:', tipoUsuarioFinal);
-      console.log('dadosRegistro completo:', JSON.stringify(dadosRegistro, null, 2));
-      console.log('tipoUsuario no objeto enviado:', dadosRegistro.tipoUsuario);
       
       const response = await axios.post('http://localhost:3000/register', dadosRegistro);
       console.log(response.data);
@@ -519,7 +531,7 @@ const Registro = () => {
         <Form onSubmit={handleRegister}>
           <h2>Registrar-se</h2>
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', textAlign: 'left' }}>Tipo de Usuário:</label>
+            <label style={{ display: 'block', marginBottom: '8px', textAlign: 'left', fontWeight: 'bold' }}>Tipo de Usuário:</label>
             <RadioGroup>
               <RadioLabel>
                 <RadioInput
@@ -587,7 +599,7 @@ const Registro = () => {
           {tipoUsuario === 'profissional' && (
             <>
               <div>
-                <label style={{ display: 'block', marginBottom: '8px', textAlign: 'left' }}>Tipo de Profissional:</label>
+                <label style={{ display: 'block', marginBottom: '16px', textAlign: 'left', fontWeight: 'bold' }}>Tipo de Profissional:</label>
                 <Select
                   value={tipoProfissional}
                   onChange={(e) => {
@@ -613,7 +625,7 @@ const Registro = () => {
 
               {tipoProfissional === 'medico' && (
                 <div>
-                  <label>Especialidade Médica:</label>
+                  <label style={{ fontWeight: 'bold' }}>Especialidade Médica:</label>
                   <Select
                     value={especialidadeMedica}
                     onChange={(e) => setEspecialidadeMedica(e.target.value)}
@@ -664,7 +676,7 @@ const Registro = () => {
 
               {numeroConselho && numeroConselho.trim() && (
                 <>
-                  <label>Local do seu atendimento</label>
+                  <label style={{ fontWeight: 'bold' }}>Local do seu atendimento</label>
                   <MapWrapper>
                     <LocationPicker onLocationSelect={handleMapClick} />
                   </MapWrapper>
@@ -692,6 +704,55 @@ const Registro = () => {
                   </p>
                 </>
               )}
+
+              <label style={{ display: 'block', marginBottom: '2px', textAlign: 'left', fontWeight: 'bold' }}>Descrição:</label>
+              <textarea
+                placeholder="Descreva sua experiência e especialidades..."
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+                style={{
+                  padding: '10px',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  width: '100%',
+                  minHeight: '100px',
+                  fontFamily: 'Figtree, sans-serif',
+                  resize: 'vertical'
+                }}
+                required
+              />
+
+              <label style={{ display: 'block', marginBottom: '2px', textAlign: 'left', fontWeight: 'bold' }}>Público Atendido:</label>
+              <Select
+                value={publicoAtendido}
+                onChange={(e) => setPublicoAtendido(e.target.value)}
+                required
+              >
+                <option value="">Selecione...</option>
+                <option value="Adultos">Adultos</option>
+                <option value="Crianças">Crianças</option>
+                <option value="Idosos">Idosos</option>
+                <option value="Adultos e Crianças">Adultos e Crianças</option>
+                <option value="Adultos e Idosos">Adultos e Idosos</option>
+                <option value="Crianças e Idosos">Crianças e Idosos</option>
+                <option value="Todos">Todos</option>
+              </Select>
+
+              <label style={{ display: 'block', marginBottom: '2px', textAlign: 'left', fontWeight: 'bold' }}>Modalidade:</label>
+              <Select
+                value={modalidade}
+                onChange={(e) => setModalidade(e.target.value)}
+                required
+              >
+                <option value="">Selecione...</option>
+                <option value="presencial">Presencial</option>
+                <option value="online">Online</option>
+                <option value="domiciliar">Domiciliar</option>
+                <option value="presencial,online">Presencial e Online</option>
+                <option value="presencial,domiciliar">Presencial e Domiciliar</option>
+                <option value="online,domiciliar">Online e Domiciliar</option>
+                <option value="presencial,online,domiciliar">Presencial, Online e Domiciliar</option>
+              </Select>
             </>
           )}
 

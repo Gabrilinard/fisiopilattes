@@ -12,7 +12,7 @@ import Footer from '../../components/Footer';
 import Header from '../../components/Header';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
-import { Button, Button_geral, Container, Container_Important, ContainerEdicao, ContainerGeral, DataHorarioMapaContainer, DataHorarioWrapper, DatePickerWrapper, Div, Div_2, FormularioReserva, H3, Input, Label, Linha, Lista, MapaContainer, MapWrapper, MensagemStatus, Paragrafo, Reserva_2, ReservaItem, ReservasContainer, Selecao, TituloAgendamento } from './style';
+import { AgendamentoContainer, Button, Button_geral, Container, Container_Important, ContainerEdicao, ContainerGeral, DataHorarioMapaContainer, DataHorarioWrapper, DatePickerWrapper, Div, Div_2, FormularioReserva, H3, InfoDescription, InfoLabel, InfoProfissionalContainer, InfoSection, InfoTitle, InfoValue, Input, Label, Linha, Lista, MapaContainer, MapWrapper, MensagemStatus, ModalidadeTag, Paragrafo, Reserva_2, ReservaItem, ReservasContainer, Selecao, TituloAgendamento } from './style';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -42,6 +42,7 @@ const Agendar = () => {
   const [novoHorario, setNovoHorario] = useState('');
   const [profissionalLocation, setProfissionalLocation] = useState(null);
   const [enderecoCompleto, setEnderecoCompleto] = useState('');
+  const [profissionalInfo, setProfissionalInfo] = useState(null);
 
   const formatarDataBrasil = (data) => {
     if (!data) return '';
@@ -143,6 +144,17 @@ const Agendar = () => {
               .then(profResponse => {
                 const profData = profResponse.data;
                 console.log('Dados do profissional recebidos:', profData);
+                
+                setProfissionalInfo({
+                  nome: profData.nome,
+                  sobrenome: profData.sobrenome,
+                  descricao: profData.descricao,
+                  publicoAtendido: profData.publicoAtendido,
+                  modalidade: profData.modalidade,
+                  cidade: profData.cidade,
+                  ufRegiao: profData.ufRegiao
+                });
+
                 if (profData.latitude && profData.longitude) {
                   const lat = parseFloat(profData.latitude);
                   const lng = parseFloat(profData.longitude);
@@ -579,7 +591,59 @@ const adicionarDiaReserva = () => {
           {mensagemLogin && <p>{mensagemLogin}</p>}
           {!mensagemLogin && (
             <>
-              <FormularioReserva onSubmit={handleReserva}>
+              {profissionalInfo && nome && (
+                <InfoProfissionalContainer>
+                  <InfoTitle>Informações do Profissional</InfoTitle>
+                  
+                  <InfoSection>
+                    <InfoLabel>Nome:</InfoLabel>
+                    <InfoValue>{profissionalInfo.nome} {profissionalInfo.sobrenome}</InfoValue>
+                  </InfoSection>
+
+                  {(profissionalInfo.cidade || profissionalInfo.ufRegiao) && (
+                    <InfoSection>
+                      <InfoLabel>Localização:</InfoLabel>
+                      <InfoValue>
+                        {profissionalInfo.cidade && profissionalInfo.ufRegiao 
+                          ? `${profissionalInfo.cidade}, ${profissionalInfo.ufRegiao}`
+                          : profissionalInfo.cidade || profissionalInfo.ufRegiao}
+                      </InfoValue>
+                    </InfoSection>
+                  )}
+
+                  {profissionalInfo.descricao && (
+                    <InfoSection>
+                      <InfoLabel>Descrição:</InfoLabel>
+                      <InfoDescription>{profissionalInfo.descricao}</InfoDescription>
+                    </InfoSection>
+                  )}
+
+                  {profissionalInfo.publicoAtendido && (
+                    <InfoSection>
+                      <InfoLabel>Público Atendido:</InfoLabel>
+                      <InfoValue>{profissionalInfo.publicoAtendido}</InfoValue>
+                    </InfoSection>
+                  )}
+
+                  {profissionalInfo.modalidade && (
+                    <InfoSection>
+                      <InfoLabel>Modalidade:</InfoLabel>
+                      <div>
+                        {profissionalInfo.modalidade.split(',').map((mod, index) => (
+                          <ModalidadeTag key={index}>
+                            {mod.trim() === 'presencial' ? 'Presencial' :
+                             mod.trim() === 'online' ? 'Online' :
+                             mod.trim() === 'domiciliar' ? 'Domiciliar' : mod.trim()}
+                          </ModalidadeTag>
+                        ))}
+                      </div>
+                    </InfoSection>
+                  )}
+                </InfoProfissionalContainer>
+              )}
+
+              <AgendamentoContainer>
+                <FormularioReserva onSubmit={handleReserva}>
                 <DataHorarioMapaContainer>
                   <DataHorarioWrapper>
                     <label>Data:</label>
@@ -700,6 +764,7 @@ const adicionarDiaReserva = () => {
                   <Button onClick={adicionarDiaReserva} style={{backgroundColor: 'green'}}>Adicionar Dia</Button>
                 </Button_geral>
               </FormularioReserva>
+              </AgendamentoContainer>
             </>
           )}
           {datasSelecionadas.length > 0 && (

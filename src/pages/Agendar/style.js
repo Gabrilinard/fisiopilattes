@@ -342,6 +342,91 @@ export const DatePickerWrapper = styled.div`
   }
 `;
 
+export const InfoProfissionalContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  background: white;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  width: 100%;
+  min-width: 300px;
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+    min-width: 100%;
+  }
+`;
+
+export const InfoTitle = styled.h3`
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10px;
+  font-family: 'Figtree', sans-serif;
+  border-bottom: 2px solid #4caf50;
+  padding-bottom: 10px;
+`;
+
+export const InfoSection = styled.div`
+  margin-bottom: 15px;
+`;
+
+export const InfoLabel = styled.strong`
+  display: block;
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 5px;
+  font-family: 'Figtree', sans-serif;
+`;
+
+export const InfoValue = styled.p`
+  color: #333;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0;
+  font-family: 'Figtree', sans-serif;
+`;
+
+export const InfoDescription = styled.p`
+  color: #555;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
+  font-family: 'Figtree', sans-serif;
+  text-align: justify;
+  max-width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+`;
+
+export const ModalidadeTag = styled.span`
+  display: inline-block;
+  background-color: #4caf50;
+  color: white;
+  padding: 5px 12px;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  margin-right: 8px;
+  margin-top: 5px;
+  font-family: 'Figtree', sans-serif;
+`;
+
+export const AgendamentoContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  flex: 1;
+  min-width: 400px;
+
+  @media (max-width: 768px) {
+    min-width: 100%;
+  }
+`;
+
 
 
 

@@ -334,6 +334,7 @@ export const InscreverButton = styled.button`
 export const SearchContainer = styled.div`
   display: flex;
   justify-content: center;
+  align-items: center;
   margin: 20px 0;
   width: 100%;
   max-width: 600px;
@@ -347,7 +348,7 @@ export const SearchContainer = styled.div`
 `;
 
 export const SearchInput = styled.input`
-  width: 100%;
+  flex: 1;
   padding: 12px 20px;
   border: 2px solid #ccc;
   border-radius: 8px;
