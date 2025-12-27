@@ -187,7 +187,6 @@ const Registro = () => {
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
   const [cidade, setCidade] = useState('');
-  const [showMap, setShowMap] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
   const { success, error: showError } = useNotification();
@@ -666,16 +665,10 @@ const Registro = () => {
               {numeroConselho && numeroConselho.trim() && (
                 <>
                   <label>Local do seu atendimento</label>
-                  <Button type="button" onClick={() => setShowMap(!showMap)} style={{ marginBottom: '10px' }}>
-                    {showMap ? 'Ocultar Mapa' : 'Mostrar Mapa'}
-                  </Button>
+                  <MapWrapper>
+                    <LocationPicker onLocationSelect={handleMapClick} />
+                  </MapWrapper>
                 </>
-              )}
-              
-              {showMap && numeroConselho && numeroConselho.trim() && (
-                <MapWrapper>
-                  <LocationPicker onLocationSelect={handleMapClick} />
-                </MapWrapper>
               )}
               
               {latitude && longitude && (
