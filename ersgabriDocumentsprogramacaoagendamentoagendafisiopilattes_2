@@ -1,0 +1,32 @@
+[33mcommit 549c1ae4e58f58a3e7650c67a56de54a55104e79[m
+Author: Gabriel Linard <127212969+Gabrilinard@users.noreply.github.com>
+Date:   Fri Dec 26 22:52:01 2025 -0300
+
+    Substituir alertas por notificações e melhorar tratamento de erro de email duplicado
+
+backend/index.js
+backend/migrations/add_location_fields.js
+backend/migrations/add_location_fields.sql
+backend/migrations/corrigir_girafa.js
+backend/migrations/corrigir_loiro.js
+backend/migrations/corrigir_louro.js
+backend/migrations/fix_default_tipoUsuario.js
+backend/migrations/fix_default_tipoUsuario.sql
+backend/migrations/fix_tipoUsuario_profissionais.js
+backend/migrations/fix_tipoUsuario_profissionais.sql
+backend/migrations/verificar_colunas.js
+backend/migrations/verificar_louro.js
+backend/migrations/verificar_todos_usuarios.js
+backend/migrations/verificar_usuarios.js
+package-lock.json
+package.json
+src/App.jsx
+src/contexts/NotificationContext.jsx
+src/pages/AdminDashboard/index.jsx
+src/pages/Agendar/index.jsx
+src/pages/EmpresasProfissionais/index.jsx
+src/pages/Entrar/index.jsx
+src/pages/ForgotPassword/index.jsx
+src/pages/Home/index.jsx
+src/pages/Registrar/index.jsx
+src/pages/ResetPassword/index.jsx

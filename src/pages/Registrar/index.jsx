@@ -1,0 +1,709 @@
+import axios from 'axios';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { useEffect, useState } from 'react';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
+import { useNavigate } from 'react-router-dom';
+import styled from 'styled-components';
+import Footer from '../../components/Footer';
+import Header from '../../components/Header';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+const Container = styled.div`
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: rgb(227, 228, 222);
+`;
+
+const Content = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+`;
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  width: 400px;
+  text-align: center;
+`;
+
+const InputWrapper = styled.div`
+  position: relative;
+  width: 100%;
+`;
+
+const Input = styled.input`
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 100%;
+`;
+
+const Select = styled.select`
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 100%;
+  background-color: white;
+`;
+
+const RadioGroup = styled.div`
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+  margin: 10px 0;
+`;
+
+const RadioLabel = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+`;
+
+const RadioInput = styled.input`
+  cursor: pointer;
+`;
+
+const EyeIcon = styled.div`
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+`;
+
+const Button = styled.button`
+  padding: 12px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  &:hover {
+    background-color: #218838;
+  }
+`;
+
+const LoginButton = styled.button`
+  padding: 12px;
+  background-color: rgb(143, 142, 142);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  &:hover {
+    background-color: rgb(82, 83, 84);
+  }
+`;
+
+const MapWrapper = styled.div`
+  width: 100%;
+  height: 400px;
+  margin: 15px 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  overflow: hidden;
+  
+  .leaflet-container {
+    height: 100%;
+    width: 100%;
+  }
+`;
+
+const LocationPicker = ({ onLocationSelect, initialLat, initialLng }) => {
+  const [position, setPosition] = useState(initialLat && initialLng ? [initialLat, initialLng] : [-14.235, -51.9253]);
+
+  useEffect(() => {
+    if (initialLat && initialLng) {
+      setPosition([initialLat, initialLng]);
+    }
+  }, [initialLat, initialLng]);
+
+  function LocationMarker() {
+    useMapEvents({
+      click(e) {
+        const { lat, lng } = e.latlng;
+        setPosition([lat, lng]);
+        onLocationSelect(lat, lng);
+      },
+    });
+
+    return position === null ? null : <Marker position={position} />;
+  }
+
+  return (
+    <MapContainer
+      center={position}
+      zoom={6}
+      style={{ height: '100%', width: '100%' }}
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      <LocationMarker />
+    </MapContainer>
+  );
+};
+
+const Registro = () => {
+  const [nome, setNome] = useState('');
+  const [sobrenome, setSobrenome] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordsMatch, setPasswordsMatch] = useState(true);
+  const [tipoUsuario, setTipoUsuario] = useState('paciente');
+  const [tipoProfissional, setTipoProfissional] = useState('');
+  const [especialidadeMedica, setEspecialidadeMedica] = useState('');
+  const [profissaoCustomizada, setProfissaoCustomizada] = useState('');
+  const [numeroConselho, setNumeroConselho] = useState('');
+  const [ufRegiao, setUfRegiao] = useState('');
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
+  const [cidade, setCidade] = useState('');
+  const [showMap, setShowMap] = useState(false);
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const { success, error: showError } = useNotification();
+
+  const converterEstadoParaSigla = (estadoNome) => {
+    const estadosMap = {
+      'acre': 'AC',
+      'alagoas': 'AL',
+      'amapá': 'AP',
+      'amazonas': 'AM',
+      'bahia': 'BA',
+      'ceará': 'CE',
+      'distrito federal': 'DF',
+      'espírito santo': 'ES',
+      'goiás': 'GO',
+      'maranhão': 'MA',
+      'mato grosso': 'MT',
+      'mato grosso do sul': 'MS',
+      'minas gerais': 'MG',
+      'pará': 'PA',
+      'paraíba': 'PB',
+      'paraná': 'PR',
+      'pernambuco': 'PE',
+      'piauí': 'PI',
+      'rio de janeiro': 'RJ',
+      'rio grande do norte': 'RN',
+      'rio grande do sul': 'RS',
+      'rondônia': 'RO',
+      'roraima': 'RR',
+      'santa catarina': 'SC',
+      'são paulo': 'SP',
+      'sergipe': 'SE',
+      'tocantins': 'TO'
+    };
+
+    if (!estadoNome) return null;
+
+    const estadoNormalizado = estadoNome.toLowerCase().trim();
+    
+    if (estadosMap[estadoNormalizado]) {
+      return estadosMap[estadoNormalizado];
+    }
+
+    if (estadoNome.length === 2 && /^[A-Z]{2}$/i.test(estadoNome)) {
+      return estadoNome.toUpperCase();
+    }
+
+    return null;
+  };
+
+  const buscarLocalizacao = async (lat, lng) => {
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=pt-BR`);
+      const data = await response.json();
+      
+      if (data && data.address) {
+        let uf = data.address.state_code || data.address.state;
+        const cidadeNome = data.address.city || data.address.town || data.address.village || data.address.municipality || data.address.county || '';
+        
+        if (uf) {
+          let ufLimpo = uf.replace(/^[A-Z]{2}-/, '').toUpperCase();
+          
+          if (ufLimpo.length > 2) {
+            const sigla = converterEstadoParaSigla(ufLimpo);
+            if (sigla) {
+              ufLimpo = sigla;
+            }
+          }
+          
+          setUfRegiao(ufLimpo);
+        }
+        if (cidadeNome) {
+          setCidade(cidadeNome);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao buscar localização:', error);
+    }
+  };
+
+  const handleMapClick = (lat, lng) => {
+    setLatitude(lat);
+    setLongitude(lng);
+    buscarLocalizacao(lat, lng);
+  };
+
+  const formatarNumeroConselho = (valor, tipoProfissional) => {
+    if (!valor) return '';
+    
+    let apenasNumeros = valor.replace(/\D/g, '');
+    
+    if (apenasNumeros.length === 0) return '';
+    
+    switch (tipoProfissional) {
+      case 'medico':
+        if (apenasNumeros.length > 6) apenasNumeros = apenasNumeros.slice(0, 6);
+        return `CRM ${apenasNumeros}`;
+      case 'dentista':
+        if (apenasNumeros.length > 6) apenasNumeros = apenasNumeros.slice(0, 6);
+        return `CRO ${apenasNumeros}`;
+      case 'nutricionista':
+        if (apenasNumeros.length > 5) apenasNumeros = apenasNumeros.slice(0, 5);
+        return `CRN ${apenasNumeros}`;
+      case 'fisioterapeuta':
+        if (apenasNumeros.length > 6) apenasNumeros = apenasNumeros.slice(0, 6);
+        return `CREFITO ${apenasNumeros}`;
+      case 'fonoaudiologo':
+        if (apenasNumeros.length > 5) apenasNumeros = apenasNumeros.slice(0, 5);
+        return `CRFa ${apenasNumeros}`;
+      default:
+        if (apenasNumeros.length > 10) apenasNumeros = apenasNumeros.slice(0, 10);
+        return apenasNumeros;
+    }
+  };
+
+  const validarNumeroConselho = (valor, tipoProfissional) => {
+    if (!valor || !valor.trim()) return false;
+    
+    const apenasNumeros = valor.replace(/\D/g, '');
+    
+    switch (tipoProfissional) {
+      case 'medico':
+        return /^CRM\s?\d{4,6}$/i.test(valor.trim()) && apenasNumeros.length >= 4 && apenasNumeros.length <= 6;
+      case 'dentista':
+        return /^CRO\s?\d{4,6}$/i.test(valor.trim()) && apenasNumeros.length >= 4 && apenasNumeros.length <= 6;
+      case 'nutricionista':
+        return /^CRN\s?\d{4,5}$/i.test(valor.trim()) && apenasNumeros.length >= 4 && apenasNumeros.length <= 5;
+      case 'fisioterapeuta':
+        return /^CREFITO\s?\d{4,6}$/i.test(valor.trim()) && apenasNumeros.length >= 4 && apenasNumeros.length <= 6;
+      case 'fonoaudiologo':
+        return /^CRFa\s?\d{4,5}$/i.test(valor.trim()) && apenasNumeros.length >= 4 && apenasNumeros.length <= 5;
+      default:
+        return apenasNumeros.length >= 3 && apenasNumeros.length <= 10;
+    }
+  };
+
+  const handleNumeroConselhoChange = (e) => {
+    const valor = e.target.value;
+    const formatado = formatarNumeroConselho(valor, tipoProfissional);
+    setNumeroConselho(formatado);
+  };
+
+  const especialidadesMedicas = [
+    'Clínico Geral',
+    'Oftalmologista',
+    'Cardiologista',
+    'Dermatologista',
+    'Pediatra',
+    'Ginecologista',
+    'Ortopedista',
+    'Neurologista',
+    'Psiquiatra',
+    'Endocrinologista',
+    'Gastroenterologista',
+    'Urologista',
+    'Otorrinolaringologista',
+    'Pneumologista',
+    'Reumatologista',
+    'Oncologista',
+    'Hematologista',
+    'Nefrologista',
+    'Anestesiologista',
+    'Radiologista',
+    'Patologista',
+    'Medicina do Trabalho',
+    'Medicina Esportiva',
+    'Geriatra',
+    'Mastologista',
+    'Proctologista',
+    'Angiologista',
+    'Cirurgião Geral',
+    'Cirurgião Plástico',
+    'Cirurgião Cardiovascular',
+    'Neurocirurgião',
+    'Cirurgião Pediátrico'
+  ];
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+  
+    const senhaValida = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+  
+    if (!senhaValida.test(senha)) {
+      showError('A senha deve ter no mínimo 8 caracteres, incluindo pelo menos um número e uma letra maiúscula.');
+      return;
+    }
+  
+    if (senha !== confirmarSenha) {
+      showError('As senhas não coincidem!');
+      return;
+    }
+
+    if (tipoUsuario === 'profissional') {
+      if (!tipoProfissional) {
+        showError('Por favor, selecione o tipo de profissional.');
+        return;
+      }
+      if (tipoProfissional === 'medico' && !especialidadeMedica) {
+        showError('Por favor, selecione sua especialidade médica.');
+        return;
+      }
+      if (tipoProfissional === 'outros' && !profissaoCustomizada.trim()) {
+        showError('Por favor, informe sua profissão.');
+        return;
+      }
+      if (!numeroConselho || !numeroConselho.trim()) {
+        showError('Por favor, informe o número do conselho.');
+        return;
+      }
+      if (!validarNumeroConselho(numeroConselho, tipoProfissional)) {
+        let mensagemErro = 'Número do conselho inválido. ';
+        switch (tipoProfissional) {
+          case 'medico':
+            mensagemErro += 'Formato esperado: CRM 123456 (4 a 6 dígitos)';
+            break;
+          case 'dentista':
+            mensagemErro += 'Formato esperado: CRO 123456 (4 a 6 dígitos)';
+            break;
+          case 'nutricionista':
+            mensagemErro += 'Formato esperado: CRN 12345 (4 a 5 dígitos)';
+            break;
+          case 'fisioterapeuta':
+            mensagemErro += 'Formato esperado: CREFITO 123456 (4 a 6 dígitos)';
+            break;
+          case 'fonoaudiologo':
+            mensagemErro += 'Formato esperado: CRFa 12345 (4 a 5 dígitos)';
+            break;
+          default:
+            mensagemErro += 'Formato inválido (3 a 10 dígitos)';
+        }
+        showError(mensagemErro);
+        return;
+      }
+      if (!latitude || !longitude) {
+        showError('Por favor, selecione sua localização no mapa.');
+        return;
+      }
+      if (!ufRegiao || !ufRegiao.trim()) {
+        showError('Por favor, selecione a UF/Região no mapa.');
+        return;
+      }
+      if (!cidade || !cidade.trim()) {
+        showError('Por favor, selecione sua cidade no mapa.');
+        return;
+      }
+    }
+  
+    try {
+      const tipoUsuarioFinal = tipoUsuario || 'paciente';
+      
+      const dadosRegistro = {
+        nome,
+        sobrenome,
+        telefone,
+        email,
+        senha,
+        tipoUsuario: tipoUsuarioFinal,
+        ...(tipoUsuarioFinal === 'profissional' && {
+          tipoProfissional: tipoProfissional === 'outros' ? profissaoCustomizada : tipoProfissional,
+          especialidadeMedica: tipoProfissional === 'medico' ? especialidadeMedica : null,
+          profissaoCustomizada: tipoProfissional === 'outros' ? profissaoCustomizada : null,
+          numeroConselho: numeroConselho.trim(),
+          ufRegiao: ufRegiao.trim(),
+          latitude: latitude,
+          longitude: longitude,
+          cidade: cidade.trim()
+        })
+      };
+
+      console.log('=== DADOS ENVIADOS PARA O BACKEND ===');
+      console.log('tipoUsuario do state:', tipoUsuario);
+      console.log('tipoUsuarioFinal que será enviado:', tipoUsuarioFinal);
+      console.log('dadosRegistro completo:', JSON.stringify(dadosRegistro, null, 2));
+      console.log('tipoUsuario no objeto enviado:', dadosRegistro.tipoUsuario);
+      
+      const response = await axios.post('http://localhost:3000/register', dadosRegistro);
+      console.log(response.data);
+      success('Usuário cadastrado com sucesso!');
+      
+      if (tipoUsuario === 'profissional') {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const userData = await login(email, senha);
+        if (userData) {
+          navigate('/AdminDashboard');
+        } else {
+          navigate('/Entrar');
+        }
+      } else {
+        navigate('/Entrar');
+      }
+    } catch (error) {
+      console.error(error);
+      showError(error.response?.data?.error || 'Erro ao registrar. Tente novamente.');
+    }
+  };
+  
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
+
+  const handleConfirmPasswordChange = (e) => {
+    setConfirmarSenha(e.target.value);
+    setPasswordsMatch(e.target.value === senha);
+  };
+
+  const handleTelefoneChange = (e) => {
+    let value = e.target.value.replace(/\D/g, ""); // Remove tudo que não for número
+  
+    if (value.length > 11) value = value.slice(0, 11); // Limita a 11 números
+  
+    if (value.length > 2 && value.length <= 7) {
+      value = `${value.slice(0, 2)} ${value.slice(2)}`;
+    } else if (value.length > 7) {
+      value = `${value.slice(0, 2)} ${value.slice(2, 7)}-${value.slice(7)}`;
+    }
+  
+    setTelefone(value);
+  };
+  
+
+  return (
+    <Container>
+      <Header />
+      <Content>
+        <h2>Registrar-se</h2>
+        <Form onSubmit={handleRegister}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', textAlign: 'left' }}>Tipo de Usuário:</label>
+            <RadioGroup>
+              <RadioLabel>
+                <RadioInput
+                  type="radio"
+                  name="tipoUsuario"
+                  value="paciente"
+                  checked={tipoUsuario === 'paciente'}
+                  onChange={(e) => setTipoUsuario(e.target.value)}
+                />
+                Paciente
+              </RadioLabel>
+              <RadioLabel>
+                <RadioInput
+                  type="radio"
+                  name="tipoUsuario"
+                  value="profissional"
+                  checked={tipoUsuario === 'profissional'}
+                  onChange={(e) => setTipoUsuario(e.target.value)}
+                />
+                Profissional
+              </RadioLabel>
+            </RadioGroup>
+          </div>
+
+          <Input type="text" placeholder="Nome" value={nome} onChange={(e) => setNome(e.target.value)} required />
+          <Input type="text" placeholder="Sobrenome" value={sobrenome} onChange={(e) => setSobrenome(e.target.value)} required />
+          <Input
+            type="text"
+            placeholder="Telefone"
+            value={telefone}
+            onChange={handleTelefoneChange}
+            maxLength="15"
+            required
+            />
+          <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+
+          {tipoUsuario === 'profissional' && (
+            <>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', textAlign: 'left' }}>Tipo de Profissional:</label>
+                <Select
+                  value={tipoProfissional}
+                  onChange={(e) => {
+                    setTipoProfissional(e.target.value);
+                    if (e.target.value !== 'outros') {
+                      setProfissaoCustomizada('');
+                    }
+                    if (e.target.value !== 'medico') {
+                      setEspecialidadeMedica('');
+                    }
+                  }}
+                  required
+                >
+                  <option value="">Selecione...</option>
+                  <option value="medico">Médico</option>
+                  <option value="dentista">Dentista</option>
+                  <option value="nutricionista">Nutricionista</option>
+                  <option value="fisioterapeuta">Fisioterapeuta</option>
+                  <option value="fonoaudiologo">Fonoaudiólogo</option>
+                  <option value="outros">Outros</option>
+                </Select>
+              </div>
+
+              {tipoProfissional === 'medico' && (
+                <div>
+                  <label>Especialidade Médica:</label>
+                  <Select
+                    value={especialidadeMedica}
+                    onChange={(e) => setEspecialidadeMedica(e.target.value)}
+                    required
+                  >
+                    <option value="">Selecione sua especialidade...</option>
+                    {especialidadesMedicas.map((especialidade) => (
+                      <option key={especialidade} value={especialidade}>
+                        {especialidade}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              )}
+
+              {tipoProfissional === 'outros' && (
+                <Input
+                  type="text"
+                  placeholder="Digite sua profissão"
+                  value={profissaoCustomizada}
+                  onChange={(e) => setProfissaoCustomizada(e.target.value)}
+                  required
+                />
+              )}
+
+              <Input
+                type="text"
+                placeholder={
+                  tipoProfissional === 'medico' ? 'CRM 123456' :
+                  tipoProfissional === 'dentista' ? 'CRO 123456' :
+                  tipoProfissional === 'nutricionista' ? 'CRN 12345' :
+                  tipoProfissional === 'fisioterapeuta' ? 'CREFITO 123456' :
+                  tipoProfissional === 'fonoaudiologo' ? 'CRFa 12345' :
+                  'Número do Conselho'
+                }
+                value={numeroConselho}
+                onChange={handleNumeroConselhoChange}
+                maxLength={
+                  tipoProfissional === 'medico' ? 11 :
+                  tipoProfissional === 'dentista' ? 11 :
+                  tipoProfissional === 'nutricionista' ? 10 :
+                  tipoProfissional === 'fisioterapeuta' ? 14 :
+                  tipoProfissional === 'fonoaudiologo' ? 10 :
+                  15
+                }
+                required
+              />
+
+              <label>Selecione sua localização no mapa:</label>
+              <Button type="button" onClick={() => setShowMap(!showMap)} style={{ marginBottom: '10px' }}>
+                {showMap ? 'Ocultar Mapa' : 'Mostrar Mapa'}
+              </Button>
+              
+              {showMap && (
+                <MapWrapper>
+                  <LocationPicker onLocationSelect={handleMapClick} />
+                </MapWrapper>
+              )}
+              
+              {latitude && longitude && (
+                <>
+                  <Input
+                    type="text"
+                    value={ufRegiao}
+                    placeholder="UF/Região (preenchido automaticamente)"
+                    readOnly
+                    style={{ backgroundColor: '#f0f0f0' }}
+                  />
+                  <Input
+                    type="text"
+                    value={cidade}
+                    placeholder="Cidade (preenchida automaticamente)"
+                    readOnly
+                    style={{ backgroundColor: '#f0f0f0' }}
+                  />
+                  <p style={{ fontSize: '12px', color: '#666', margin: '5px 0' }}>
+                    Localização selecionada: {latitude.toFixed(6)}, {longitude.toFixed(6)}
+                  </p>
+                </>
+              )}
+            </>
+          )}
+          
+          <InputWrapper>
+            <Input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Senha"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              required
+            />
+            <EyeIcon onClick={togglePasswordVisibility}>
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </EyeIcon>
+          </InputWrapper>
+
+          <InputWrapper>
+            <Input
+              type={showConfirmPassword ? 'text' : 'password'}
+              placeholder="Confirmar Senha"
+              value={confirmarSenha}
+              onChange={handleConfirmPasswordChange}
+              required
+            />
+            <EyeIcon onClick={toggleConfirmPasswordVisibility}>
+              {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+            </EyeIcon>
+          </InputWrapper>
+
+          {!passwordsMatch && <p style={{ color: 'red' }}>As senhas não coincidem.</p>}
+
+          <Button type="submit">Criar Conta</Button>
+          <LoginButton onClick={() => navigate('/Entrar')}>Já tem uma conta? Faça o Login</LoginButton>
+        </Form>
+      </Content>
+      <Footer />
+    </Container>
+  );
+};
+
+export default Registro;
