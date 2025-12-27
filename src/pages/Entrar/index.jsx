@@ -141,7 +141,7 @@ const handleEmailKeyDown = (e) => {
 
   return (
     <PageWrapper>
-      <Header /> {/* Exibindo o Header */}
+      <Header /> 
       <ContentContainer>
         <FormWrapper>
           <h2>Entrar</h2>
@@ -177,7 +177,7 @@ const handleEmailKeyDown = (e) => {
           </RegisterButton>
         </FormWrapper>
       </ContentContainer>
-      <Footer /> {/* Exibindo o Footer */}
+      <Footer /> 
     </PageWrapper>
   );
 };

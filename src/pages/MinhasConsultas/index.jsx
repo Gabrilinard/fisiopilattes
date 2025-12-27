@@ -58,7 +58,6 @@ const MinhasConsultas = () => {
       const response = await axios.get(`http://localhost:3000/reservas?usuario_id=${user.id}`);
       const consultasData = response.data || [];
       
-      // Carregar nomes dos profissionais
       const consultasComNomes = await Promise.all(
         consultasData.map(async (consulta) => {
           if (consulta.profissional_id) {

@@ -129,6 +129,13 @@ const EmpresasProfissionais = () => {
         'fisioterapeuta': 'Fisioterapeutas',
         'fonoaudiologo': 'Fonoaudiólogos'
     };
+    const categoriasLabelsSingulares = {
+        'medico': 'Médico',
+        'dentista': 'Dentista',
+        'nutricionista': 'Nutricionista',
+        'fisioterapeuta': 'Fisioterapeuta',
+        'fonoaudiologo': 'Fonoaudiólogo'
+    };
     const [profissionaisPorCategoria, setProfissionaisPorCategoria] = useState({});
     const [profissionaisExibidos, setProfissionaisExibidos] = useState({});
     const [categoriaAtiva, setCategoriaAtiva] = useState('medico');
@@ -330,7 +337,7 @@ const EmpresasProfissionais = () => {
                         <WelcomeText style={{ textAlign: 'center', margin: '0 auto' }}>
                             {termoPesquisa 
                                 ? `Nenhum resultado encontrado para "${termoPesquisa}".`
-                                : `Nenhum ${categoriasLabels[categoriaAtiva].toLowerCase()} cadastrado no momento.`
+                                : `Nenhum ${categoriasLabelsSingulares[categoriaAtiva].toLowerCase()} cadastrado no momento.`
                             }
                         </WelcomeText>
                     </div>

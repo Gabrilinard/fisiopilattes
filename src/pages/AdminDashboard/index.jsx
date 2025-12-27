@@ -150,7 +150,6 @@ const AdminDashboard = () => {
     }
   }, [userId]);
 
-  // Refs para os drawers
   const mapDrawerRef = useRef(null);
   const infoDrawerRef = useRef(null);
   const formDrawerRef = useRef(null);
