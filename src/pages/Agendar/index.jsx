@@ -112,7 +112,53 @@ const Agendar = () => {
 
 
   useEffect(() => {
-    if (user && user.id) {
+    if (user && user.id && nome) {
+      const partes = nome.trim().split(' ');
+      const nomeProf = partes[0] || '';
+      const sobrenomeProf = partes.slice(1).join(' ') || '';
+      
+      axios.get(`http://localhost:3000/profissionais`)
+        .then(response => {
+          const profissional = response.data.find(p => 
+            p.nomeCompleto === nome || 
+            (p.nome === nomeProf && p.sobrenome === sobrenomeProf)
+          );
+          
+          if (profissional && profissional.id) {
+            axios.get(`http://localhost:3000/reservas?usuario_id=${user.id}&profissional_id=${profissional.id}`)
+              .then(response => {
+                const reservasFormatadas = response.data.map(reserva => ({
+                  ...reserva,
+                  horario: formatarHorarioBrasil(reserva.horario)
+                }));
+                setReservas(reservasFormatadas);  
+              })
+              .catch(error => console.error('Erro ao buscar consultas:', error));
+          } else {
+            axios.get(`http://localhost:3000/reservas/${user.id}`)
+              .then(response => {
+                const reservasFormatadas = response.data.map(reserva => ({
+                  ...reserva,
+                  horario: formatarHorarioBrasil(reserva.horario)
+                }));
+                setReservas(reservasFormatadas);  
+              })
+              .catch(error => console.error('Erro ao buscar consultas:', error));
+          }
+        })
+        .catch(error => {
+          console.error('Erro ao buscar profissional:', error);
+          axios.get(`http://localhost:3000/reservas/${user.id}`)
+            .then(response => {
+              const reservasFormatadas = response.data.map(reserva => ({
+                ...reserva,
+                horario: formatarHorarioBrasil(reserva.horario)
+              }));
+              setReservas(reservasFormatadas);  
+            })
+            .catch(error => console.error('Erro ao buscar consultas:', error));
+        });
+    } else if (user && user.id) {
       axios.get(`http://localhost:3000/reservas/${user.id}`)
         .then(response => {
           const reservasFormatadas = response.data.map(reserva => ({
@@ -123,28 +169,8 @@ const Agendar = () => {
         })
         .catch(error => console.error('Erro ao buscar consultas:', error));
     }
+  }, [user, nome]);
 
-    axios.get('http://localhost:3000/reservas')
-      .then(response => {
-        const reservasData = response.data.map(reserva => ({
-          ...reserva,
-          horario: formatarHorarioBrasil(reserva.horario)
-        }));
-        setReservas(reservasData);
-      })
-      .catch(error => console.error('Erro ao buscar reservas:', error));
-  }, [user]);
-
-  const atualizarStatus = (id, status) => {
-    axios.patch(`http://localhost:3000/reservas/${id}`, { status })
-      .then(() => {
-        const updatedReservas = reservas.map(reserva =>
-          reserva.id === id ? { ...reserva, status } : reserva
-        );
-        setReservas(updatedReservas);
-      })
-      .catch(error => console.error('Erro ao atualizar status:', error));
-  };
 
   const calcularHorarioFinal = (horario) => {
     if (!horario) return '';
@@ -225,7 +251,7 @@ useEffect(() => {
   }, 5000 ); 
 
   return () => clearInterval(interval);
-}, [solicitCount, faltasCount, edicoesCount]);
+}, [solicitCount, faltasCount, edicoesCount, user]);
 
 useEffect(() => {
   const storedCount = sessionStorage.getItem('solicitCount');
@@ -260,6 +286,7 @@ const handleReserva = async (e) => {
       horarioFinal,
       qntd_pessoa: 1, 
       usuario_id: user.id,
+      nomeProfissional: nome || null,
     });
 
     const novaReserva = {
@@ -271,10 +298,10 @@ const handleReserva = async (e) => {
       ...response.data, 
     };
 
-      setReservas((prevReservas) => [...prevReservas, novaReserva]);
+    setReservas((prevReservas) => [...prevReservas, novaReserva]);
 
-      setDataSelecionada(new Date());
-      setHorario('');
+    setDataSelecionada(new Date());
+    setHorario('');
 
     setSolicitCount((prevCount) => prevCount + 1);
     sendEmailNotification(user.email, user.nome, solicitCount, faltasCount, edicoesCount);
@@ -435,6 +462,7 @@ const adicionarDiaReserva = () => {
           horarioFinal: reserva.horarioFinal,
           qntd_pessoa: 1,
           usuario_id: user.id,
+          nomeProfissional: nome || null,
         });
       }));
 
@@ -616,7 +644,7 @@ const adicionarDiaReserva = () => {
                       }}
                       step="60"
                     />
-
+  
                     <Button onClick={handleSalvarEdicao}>Confirmar Edição</Button>
                   </ContainerEdicao>
                 )}

@@ -125,6 +125,62 @@ const Registro = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  const formatarNumeroConselho = (valor, tipoProfissional) => {
+    if (!valor) return '';
+    
+    let apenasNumeros = valor.replace(/\D/g, '');
+    
+    if (apenasNumeros.length === 0) return '';
+    
+    switch (tipoProfissional) {
+      case 'medico':
+        if (apenasNumeros.length > 6) apenasNumeros = apenasNumeros.slice(0, 6);
+        return `CRM ${apenasNumeros}`;
+      case 'dentista':
+        if (apenasNumeros.length > 6) apenasNumeros = apenasNumeros.slice(0, 6);
+        return `CRO ${apenasNumeros}`;
+      case 'nutricionista':
+        if (apenasNumeros.length > 5) apenasNumeros = apenasNumeros.slice(0, 5);
+        return `CRN ${apenasNumeros}`;
+      case 'fisioterapeuta':
+        if (apenasNumeros.length > 6) apenasNumeros = apenasNumeros.slice(0, 6);
+        return `CREFITO ${apenasNumeros}`;
+      case 'fonoaudiologo':
+        if (apenasNumeros.length > 5) apenasNumeros = apenasNumeros.slice(0, 5);
+        return `CRFa ${apenasNumeros}`;
+      default:
+        if (apenasNumeros.length > 10) apenasNumeros = apenasNumeros.slice(0, 10);
+        return apenasNumeros;
+    }
+  };
+
+  const validarNumeroConselho = (valor, tipoProfissional) => {
+    if (!valor || !valor.trim()) return false;
+    
+    const apenasNumeros = valor.replace(/\D/g, '');
+    
+    switch (tipoProfissional) {
+      case 'medico':
+        return /^CRM\s?\d{4,6}$/i.test(valor.trim()) && apenasNumeros.length >= 4 && apenasNumeros.length <= 6;
+      case 'dentista':
+        return /^CRO\s?\d{4,6}$/i.test(valor.trim()) && apenasNumeros.length >= 4 && apenasNumeros.length <= 6;
+      case 'nutricionista':
+        return /^CRN\s?\d{4,5}$/i.test(valor.trim()) && apenasNumeros.length >= 4 && apenasNumeros.length <= 5;
+      case 'fisioterapeuta':
+        return /^CREFITO\s?\d{4,6}$/i.test(valor.trim()) && apenasNumeros.length >= 4 && apenasNumeros.length <= 6;
+      case 'fonoaudiologo':
+        return /^CRFa\s?\d{4,5}$/i.test(valor.trim()) && apenasNumeros.length >= 4 && apenasNumeros.length <= 5;
+      default:
+        return apenasNumeros.length >= 3 && apenasNumeros.length <= 10;
+    }
+  };
+
+  const handleNumeroConselhoChange = (e) => {
+    const valor = e.target.value;
+    const formatado = formatarNumeroConselho(valor, tipoProfissional);
+    setNumeroConselho(formatado);
+  };
+
   const especialidadesMedicas = [
     'Clínico Geral',
     'Oftalmologista',
@@ -192,9 +248,28 @@ const Registro = () => {
         alert('Por favor, informe o número do conselho.');
         return;
       }
-      const regexConselho = /^[A-Za-z0-9\s]{3,20}$/;
-      if (!regexConselho.test(numeroConselho.trim())) {
-        alert('Número do conselho inválido. Deve conter entre 3 e 20 caracteres alfanuméricos (ex: CRM 123456).');
+      if (!validarNumeroConselho(numeroConselho, tipoProfissional)) {
+        let mensagemErro = 'Número do conselho inválido. ';
+        switch (tipoProfissional) {
+          case 'medico':
+            mensagemErro += 'Formato esperado: CRM 123456 (4 a 6 dígitos)';
+            break;
+          case 'dentista':
+            mensagemErro += 'Formato esperado: CRO 123456 (4 a 6 dígitos)';
+            break;
+          case 'nutricionista':
+            mensagemErro += 'Formato esperado: CRN 12345 (4 a 5 dígitos)';
+            break;
+          case 'fisioterapeuta':
+            mensagemErro += 'Formato esperado: CREFITO 123456 (4 a 6 dígitos)';
+            break;
+          case 'fonoaudiologo':
+            mensagemErro += 'Formato esperado: CRFa 12345 (4 a 5 dígitos)';
+            break;
+          default:
+            mensagemErro += 'Formato inválido (3 a 10 dígitos)';
+        }
+        alert(mensagemErro);
         return;
       }
       if (!ufRegiao || !ufRegiao.trim()) {
@@ -371,9 +446,24 @@ const Registro = () => {
 
               <Input
                 type="text"
-                placeholder="Número do Conselho (ex: CRM 123456)"
+                placeholder={
+                  tipoProfissional === 'medico' ? 'CRM 123456' :
+                  tipoProfissional === 'dentista' ? 'CRO 123456' :
+                  tipoProfissional === 'nutricionista' ? 'CRN 12345' :
+                  tipoProfissional === 'fisioterapeuta' ? 'CREFITO 123456' :
+                  tipoProfissional === 'fonoaudiologo' ? 'CRFa 12345' :
+                  'Número do Conselho'
+                }
                 value={numeroConselho}
-                onChange={(e) => setNumeroConselho(e.target.value)}
+                onChange={handleNumeroConselhoChange}
+                maxLength={
+                  tipoProfissional === 'medico' ? 11 :
+                  tipoProfissional === 'dentista' ? 11 :
+                  tipoProfissional === 'nutricionista' ? 10 :
+                  tipoProfissional === 'fisioterapeuta' ? 14 :
+                  tipoProfissional === 'fonoaudiologo' ? 10 :
+                  15
+                }
                 required
               />
 

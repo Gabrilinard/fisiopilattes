@@ -107,7 +107,18 @@ const EmpresasProfissionais = () => {
                                 <EmpresaCard key={index}>
                                     <EmpresaNome>{profissional.nomeCompleto}</EmpresaNome>
                                     <EmpresaInfo>
-                                        {profissional.tipoProfissional}
+                                        <div style={{ marginBottom: '8px', fontWeight: '500' }}>
+                                            {profissional.tipoProfissional}
+                                        </div>
+                                        {profissional.ufRegiao ? (
+                                            <div style={{ color: '#666', fontSize: '14px', fontWeight: '500' }}>
+                                                UF: {profissional.ufRegiao}
+                                            </div>
+                                        ) : (
+                                            <div style={{ color: '#999', fontSize: '12px', fontStyle: 'italic' }}>
+                                                UF não informada
+                                            </div>
+                                        )}
                                     </EmpresaInfo>
                                     <InscreverButton onClick={() => handleInscrever(profissional.nomeCompleto, 'profissional')}>
                                         Agende Agora

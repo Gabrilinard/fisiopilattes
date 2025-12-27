@@ -17,7 +17,7 @@ const AdminDashboard = () => {
   const [userId, setUserId] = useState([]);
   const [motivo, setMotivo] = useState('');
   const [mostrarMotivo, setMostrarMotivo] = useState(null);
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [showReservas, setShowReservas] = useState(false);
   const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
@@ -92,9 +92,18 @@ const AdminDashboard = () => {
   }, [userId]);
 
   useEffect(() => {
-    axios.get('http://localhost:3000/reservas')
+    if (!user || !user.id) return;
+    
+    const url = user.tipoUsuario === 'profissional' 
+      ? `http://localhost:3000/reservas?profissional_id=${user.id}`
+      : 'http://localhost:3000/reservas';
+    
+    console.log('Buscando reservas para:', { userId: user.id, tipoUsuario: user.tipoUsuario, url });
+    
+    axios.get(url)
       .then(response => {
         const reservasData = response.data;
+        console.log('Reservas recebidas:', reservasData);
     
         setReservas(reservasData);
     
