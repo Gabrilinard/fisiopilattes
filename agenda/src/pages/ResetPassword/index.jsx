@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState} from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 
 const PageWrapper = styled.div`
@@ -43,12 +43,9 @@ const Button = styled.button`
 `;
 
 const ResetPassword = () => {
-  const { token} = useParams(); // Obtenha o 'token' e 'id' da URL
   const [senha, setSenha] = useState('');
   const [id, setId] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
-  const [userId, setUserId] = useState(id); // ID do usuário recebido pela URL
-  const [tokenValid, setTokenValid] = useState(false); // Verifica se o token é válido
   const navigate = useNavigate();
 
   const handleResetPassword = async (e) => {
@@ -62,7 +59,7 @@ const ResetPassword = () => {
   
     console.log(`ID: ${id}, Senha: ${senha}`); // Verifique no console se os valores estão corretos
   
-    const response = await fetch(`http://localhost:4000/api/reset-password/${id}`, {
+    const response = await fetch(`http://localhost:3000/api/reset-password/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ senha }),

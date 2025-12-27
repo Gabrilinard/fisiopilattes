@@ -1,11 +1,10 @@
-import { useState } from 'react';
-import { FaEye, FaEyeSlash } from 'react-icons/fa'; // Ícones de olho
+import { useRef, useState } from 'react';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import Footer from '../../components/Footer'; // Importando o Footer
-import Header from '../../components/Header'; // Importando o Header
+import Footer from '../../components/Footer';
+import Header from '../../components/Header';
 import { useAuth } from '../../contexts/AuthContext';
-import { useRef } from 'react';
 
 
 const PageWrapper = styled.div`
@@ -104,7 +103,6 @@ const ForgotPasswordButton = styled.button`
 
 const Login = () => {
   const [email, setEmail] = useState('');
-  const { user } = useAuth(); 
   const [senha, setSenha] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
@@ -114,17 +112,17 @@ const Login = () => {
 
 const handleEmailKeyDown = (e) => {
   if (e.key === 'Enter') {
-    e.preventDefault(); // Evita envio do formulário
-    senhaRef.current.focus(); // Move foco para o campo senha
+    e.preventDefault(); 
+    senhaRef.current.focus(); 
   }
 };
 
 
   const handleLogin = async (e) => {
   e.preventDefault();
-  const success = await login(email, senha);
-  if (success) {
-    if (email === 'fisiopilattes@gmail.com') {
+  const userData = await login(email, senha);
+  if (userData) {
+    if (userData.tipoUsuario === 'profissional') {
       navigate('/AdminDashboard');
     } else {
       navigate('/');

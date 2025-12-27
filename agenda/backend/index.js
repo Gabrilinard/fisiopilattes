@@ -1,3 +1,4 @@
+/* eslint-env node */
 const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
@@ -9,12 +10,15 @@ const path = require('path');
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
+  credentials: true
+}));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Conectar ao banco de dados
 const db = mysql.createConnection({
   host: 'localhost',
+  port: 3306,
   user: 'root',
   password: 'Medusawebby210',
   database: 'agendamento',
@@ -27,6 +31,7 @@ module.exports = db;
 
 const dbCallback = mysql.createConnection({
   host: 'localhost',
+  port: 3306,
   user: 'root',
   password: 'Medusawebby210',
   database: 'agendamento',
@@ -35,9 +40,9 @@ const dbCallback = mysql.createConnection({
   queueLimit: 0
 });
 
-// Instância para promessas
 const dbPromise = mysql.createConnection({
   host: 'localhost',
+  port: 3306,
   user: 'root',
   password: 'Medusawebby210',
   database: 'agendamento',
@@ -48,36 +53,183 @@ const dbPromise = mysql.createConnection({
 
 module.exports = { dbCallback, dbPromise };
 
-db.connect(err => {
-  if (err) console.error(err);
-  else console.log('Banco conectado!');
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`Servidor rodando na porta ${port}`);
 });
 
-// 🔹 Registro de Usuário
+db.connect(err => {
+  if (err) {
+    console.error('Erro ao conectar ao banco de dados:', err.message);
+    console.log('Servidor continuará rodando, mas operações de banco podem falhar.');
+  } else {
+    console.log('Banco conectado!');
+  }
+});
+
 app.post('/register', async (req, res) => {
-    const { nome, sobrenome, telefone, email, senha } = req.body;
+    const { 
+      nome, 
+      sobrenome, 
+      telefone,
+      email,
+      senha,
+      tipoUsuario,
+      tipoProfissional,
+      especialidadeMedica,
+      profissaoCustomizada,
+      numeroConselho,
+      ufRegiao
+    } = req.body;
   
-    console.log(req.body);  // Verifique os dados recebidos
+    console.log('=== DADOS RECEBIDOS NO REGISTRO ===');
+    console.log('req.body completo:', JSON.stringify(req.body, null, 2));
+    console.log('tipoUsuario:', tipoUsuario);
   
     if (!nome || !sobrenome || !email || !senha) {
       return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
     }
+    
+    if (tipoUsuario === 'profissional') {
+      if (!tipoProfissional) {
+        return res.status(400).json({ error: 'Tipo de profissional é obrigatório.' });
+      }
+      const tiposValidos = ['medico', 'dentista', 'nutricionista', 'fisioterapeuta', 'fonoaudiologo', 'outros'];
+      if (!tiposValidos.includes(tipoProfissional)) {
+        return res.status(400).json({ error: 'Tipo de profissional inválido.' });
+      }
+      if (tipoProfissional === 'medico' && (!especialidadeMedica || !especialidadeMedica.trim())) {
+        return res.status(400).json({ error: 'Especialidade médica é obrigatória para médicos.' });
+      }
+      if (tipoProfissional === 'outros' && (!profissaoCustomizada || !profissaoCustomizada.trim())) {
+        return res.status(400).json({ error: 'Profissão customizada é obrigatória quando selecionar "Outros".' });
+      }
+      if (!numeroConselho || !numeroConselho.trim()) {
+        return res.status(400).json({ error: 'Número do conselho é obrigatório para profissionais.' });
+      }
+      
+      const apenasNumeros = numeroConselho.replace(/\D/g, '');
+      let regexConselho;
+      let mensagemErro;
+      
+      switch (tipoProfissional) {
+        case 'medico':
+          regexConselho = /^CRM\s?\d{4,6}$/i;
+          mensagemErro = 'Número do conselho inválido. Formato esperado: CRM 123456 (4 a 6 dígitos)';
+          break;
+        case 'dentista':
+          regexConselho = /^CRO\s?\d{4,6}$/i;
+          mensagemErro = 'Número do conselho inválido. Formato esperado: CRO 123456 (4 a 6 dígitos)';
+          break;
+        case 'nutricionista':
+          regexConselho = /^CRN\s?\d{4,5}$/i;
+          mensagemErro = 'Número do conselho inválido. Formato esperado: CRN 12345 (4 a 5 dígitos)';
+          break;
+        case 'fisioterapeuta':
+          regexConselho = /^CREFITO\s?\d{4,6}$/i;
+          mensagemErro = 'Número do conselho inválido. Formato esperado: CREFITO 123456 (4 a 6 dígitos)';
+          break;
+        case 'fonoaudiologo':
+          regexConselho = /^CRFa\s?\d{4,5}$/i;
+          mensagemErro = 'Número do conselho inválido. Formato esperado: CRFa 12345 (4 a 5 dígitos)';
+          break;
+        default:
+          regexConselho = /^[A-Za-z0-9\s]{3,15}$/;
+          mensagemErro = 'Número do conselho inválido. Deve conter entre 3 e 10 dígitos';
+      }
+      
+      if (!regexConselho.test(numeroConselho.trim())) {
+        return res.status(400).json({ error: mensagemErro });
+      }
+      
+      if (tipoProfissional === 'medico' && (apenasNumeros.length < 4 || apenasNumeros.length > 6)) {
+        return res.status(400).json({ error: 'CRM deve conter entre 4 e 6 dígitos' });
+      }
+      if (tipoProfissional === 'dentista' && (apenasNumeros.length < 4 || apenasNumeros.length > 6)) {
+        return res.status(400).json({ error: 'CRO deve conter entre 4 e 6 dígitos' });
+      }
+      if (tipoProfissional === 'nutricionista' && (apenasNumeros.length < 4 || apenasNumeros.length > 5)) {
+        return res.status(400).json({ error: 'CRN deve conter entre 4 e 5 dígitos' });
+      }
+      if (tipoProfissional === 'fisioterapeuta' && (apenasNumeros.length < 4 || apenasNumeros.length > 6)) {
+        return res.status(400).json({ error: 'CREFITO deve conter entre 4 e 6 dígitos' });
+      }
+      if (tipoProfissional === 'fonoaudiologo' && (apenasNumeros.length < 4 || apenasNumeros.length > 5)) {
+        return res.status(400).json({ error: 'CRFa deve conter entre 4 e 5 dígitos' });
+      }
+      if (!ufRegiao || !ufRegiao.trim()) {
+        return res.status(400).json({ error: 'UF/Região é obrigatória para profissionais.' });
+      }
+    }
   
     try {
       const hashedPassword = await bcrypt.hash(senha, 10);
-  
-      db.query(
-        'INSERT INTO usuario (nome, sobrenome, telefone, email, senha) VALUES (?, ?, ?, ?, ?)',
-        [nome, sobrenome, telefone, email, hashedPassword],
-        (err, results) => {
-          if (err) {
-            console.error('Erro ao registrar:', err);
+
+      let query = 'INSERT INTO usuario (nome, sobrenome, telefone, email, senha';
+      let values = [nome, sobrenome, telefone, email, hashedPassword];
+      let placeholders = '?, ?, ?, ?, ?';
+
+      query += ', tipoUsuario';
+      placeholders += ', ?';
+      values.push(tipoUsuario || 'paciente');
+
+      if (tipoUsuario === 'profissional') {
+        query += ', tipoProfissional';
+        placeholders += ', ?';
+
+        const tipoProfissionalFinal = tipoProfissional === 'medico' 
+          ? especialidadeMedica 
+          : (tipoProfissional === 'outros' ? profissaoCustomizada : tipoProfissional);
+        values.push(tipoProfissionalFinal);
+
+        query += ', numeroConselho';
+        placeholders += ', ?';
+        values.push(numeroConselho.trim());
+
+        query += ', ufRegiao';
+        placeholders += ', ?';
+        values.push(ufRegiao.trim());
+      }
+
+      query += `) VALUES (${placeholders})`;
+
+      console.log('=== EXECUTANDO QUERY ===');
+      console.log('Query:', query);
+      console.log('Values:', values);
+
+      db.query(query, values, async (err, results) => {
+        if (err) {
+          console.error('=== ERRO AO REGISTRAR ===');
+          console.error('Erro completo:', err);
+          console.error('Código do erro:', err.code);
+          console.error('Mensagem do erro:', err.sqlMessage);
+          if (err.code === 'ER_BAD_FIELD_ERROR') {
+            console.log('Colunas de profissional não existem, inserindo apenas campos básicos...');
+            db.query(
+              'INSERT INTO usuario (nome, sobrenome, telefone, email, senha) VALUES (?, ?, ?, ?, ?)',
+              [nome, sobrenome, telefone, email, hashedPassword],
+              (err2, results2) => {
+                if (err2) {
+                  console.error('Erro ao registrar (fallback):', err2);
+                  return res.status(400).json({ error: `Erro ao registrar: ${err2.sqlMessage}` });
+                }
+                console.log('Usuário registrado com sucesso (sem campos profissionais)', results2);
+                console.log('ID inserido:', results2.insertId);
+                res.json({ message: 'Usuário registrado com sucesso!', id: results2.insertId });
+              }
+            );
+          } else {
             return res.status(400).json({ error: `Erro ao registrar: ${err.sqlMessage}` });
           }
-          console.log('Usuário registrado com sucesso', results);
-          res.json({ message: 'Usuário registrado com sucesso!', id: results.insertId });
+        } else {
+          const userId = results.insertId;
+          console.log('=== USUÁRIO CRIADO COM SUCESSO ===');
+          console.log('ID do usuário criado:', userId);
+          console.log('Resultados:', results);
+          
+          res.json({ message: 'Usuário registrado com sucesso!', id: userId });
         }
-      );
+      });
     } catch (error) {
       console.error('Erro no servidor:', error);
       res.status(500).json({ error: 'Erro interno do servidor' });
@@ -85,7 +237,6 @@ app.post('/register', async (req, res) => {
   });
 
 
-// 🔹 Login de Usuário
 app.post('/login', (req, res) => {
   const { email, senha } = req.body;
   db.query('SELECT * FROM usuario WHERE email = ?', [email], async (err, results) => {
@@ -105,39 +256,68 @@ app.post('/login', (req, res) => {
         nome: user.nome, 
         sobrenome: user.sobrenome, 
         telefone: user.telefone,
-        email: user.email 
+        email: user.email,
+        tipoUsuario: user.tipoUsuario || 'paciente'
       } 
     });
   });
 })
 
-// 🔹 Obter Dados do Usuário
 app.get('/user/:id', (req, res) => {
   const { id } = req.params;
-  db.query('SELECT id, nome, email FROM usuario WHERE id = ?', [id], (err, results) => {
+  db.query('SELECT id, nome, email, tipoUsuario FROM usuario WHERE id = ?', [id], (err, results) => {
     if (err || results.length === 0) return res.status(404).json({ error: 'Usuário não encontrado' });
     res.json(results[0]);
   });
 });
 
-// Rota para agendar um horário
-app.post('/reservas', (req, res) => {
-    console.log(req.body); // Verifique os dados recebidos
+app.post('/reservas', async (req, res) => {
+    console.log(req.body); 
   
-    const { nome, sobrenome, telefone, email, dia, horario, horarioFinal, qntd_pessoa, usuario_id } = req.body;
+    const { nome, sobrenome, telefone, email, dia, horario, horarioFinal, qntd_pessoa, usuario_id, nomeProfissional } = req.body;
 
-    const sql = 'INSERT INTO reservas (nome, sobrenome, telefone, email, dia, horario, horarioFinal, qntd_pessoa, usuario_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
-    db.query(sql, [nome, sobrenome, telefone, email, dia, horario, horarioFinal, qntd_pessoa, usuario_id], (err, result) => {
+    let profissional_id = null;
+    
+    if (nomeProfissional) {
+      try {
+        const partes = nomeProfissional.trim().split(' ');
+        const nomeProf = partes[0] || '';
+        const sobrenomeProf = partes.slice(1).join(' ') || '';
+        
+        console.log('Buscando profissional:', { nomeProfissional, nomeProf, sobrenomeProf });
+        
+        const profissionalQuery = 'SELECT id FROM usuario WHERE nome = ? AND sobrenome = ? AND tipoUsuario = ? LIMIT 1';
+        const profResults = await new Promise((resolve, reject) => {
+          db.query(profissionalQuery, [nomeProf, sobrenomeProf, 'profissional'], (err, results) => {
+            if (err) reject(err);
+            else resolve(results);
+          });
+        });
+        
+        if (profResults.length > 0) {
+          profissional_id = profResults[0].id;
+          console.log('Profissional encontrado com ID:', profissional_id);
+        } else {
+          console.log('Profissional não encontrado no banco de dados');
+        }
+      } catch (err) {
+        console.error('Erro ao buscar profissional:', err);
+      }
+    }
+    
+    console.log('Criando reserva com profissional_id:', profissional_id);
+    const sql = 'INSERT INTO reservas (nome, sobrenome, telefone, email, dia, horario, horarioFinal, qntd_pessoa, usuario_id, profissional_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    db.query(sql, [nome, sobrenome, telefone, email, dia, horario, horarioFinal, qntd_pessoa, usuario_id, profissional_id], (err, result) => {
         if (err) {
             console.error('Erro ao inserir no banco de dados:', err);
             return res.status(500).json({ error: 'Erro ao processar a reserva.' });
         }
+        console.log('Reserva criada com sucesso, ID:', result.insertId, 'profissional_id:', profissional_id);
         res.json({ success: true, id: result.insertId });
     });
 });
 
   
-  // Rota para listar agendamentos
   app.get('/reservas/:id', (req, res) => {
     const userId = req.params.id;
     db.query('SELECT * FROM reservas WHERE usuario_id = ?', [userId], (err, results) => {
@@ -146,9 +326,8 @@ app.post('/reservas', (req, res) => {
     });
 });
   
-  // Rota para atualizar status do agendamento
   app.delete('/reservas', (req, res) => {
-    const { usuario, horario, dia } = req.body;  // Pega os parâmetros da requisição
+    const { usuario, horario, dia } = req.body;  
 
     console.error('Usuário:', usuario, 'Horário:', horario, 'Dia:', dia);
 
@@ -173,8 +352,42 @@ app.post('/reservas', (req, res) => {
 });
 
 app.get('/reservas', (req, res) => {
-    db.query('SELECT * FROM reservas', (err, results) => {
-      if (err) return res.status(500).json(err);
+    const { profissional_id, usuario_id } = req.query;
+    
+    let query = 'SELECT * FROM reservas';
+    let queryParams = [];
+    let whereConditions = [];
+    
+    if (usuario_id) {
+      whereConditions.push('usuario_id = ?');
+      queryParams.push(usuario_id);
+    }
+    
+    if (profissional_id) {
+      whereConditions.push('profissional_id = ?');
+      queryParams.push(profissional_id);
+    }
+    
+    if (whereConditions.length > 0) {
+      query += ' WHERE ' + whereConditions.join(' AND ');
+    }
+    
+    if (usuario_id && profissional_id) {
+      console.log(`Filtrando reservas por usuario_id: ${usuario_id} e profissional_id: ${profissional_id}`);
+    } else if (profissional_id) {
+      console.log('Filtrando reservas por profissional_id:', profissional_id);
+    } else if (usuario_id) {
+      console.log('Filtrando reservas por usuario_id:', usuario_id);
+    } else {
+      console.log('Buscando todas as reservas (sem filtro)');
+    }
+    
+    db.query(query, queryParams, (err, results) => {
+      if (err) {
+        console.error('Erro ao buscar reservas:', err);
+        return res.status(500).json(err);
+      }
+      console.log(`Retornando ${results.length} reservas`);
       res.json(results);
     });
   });
@@ -182,7 +395,7 @@ app.get('/reservas', (req, res) => {
 
   app.patch('/reservas/:id', (req, res) => {
     const agendamentoId = req.params.id;
-    const { status } = req.body; // No seu caso, deve ser o "status", não "horario"
+    const { status } = req.body; 
     
     if (!status) {
       return res.status(400).json({ error: 'Status é obrigatório' });
@@ -204,30 +417,22 @@ app.get('/reservas', (req, res) => {
   });
   
   app.put('/reservas/:id', async (req, res) => {
-    const { id } = req.params; // ID da reserva a ser atualizada
-    const { dia, horario, qntd_pessoa } = req.body; // Dados da reserva a ser atualizada
+    const { id } = req.params; 
+    const { dia, horario, qntd_pessoa } = req.body; 
   
     try {
-      // Verificando se a reserva existe
-      const reserva = await Reserva.findOne({ where: { id } });
+      const [reservas] = await dbPromise.query('SELECT * FROM reservas WHERE id = ?', [id]);
   
-      if (!reserva) {
+      if (reservas.length === 0) {
         return res.status(404).json({ error: 'Reserva não encontrada' });
       }
   
-      // Verificando se a reserva pertence ao usuário logado
-      if (reserva.userId !== userId) {
-        return res.status(403).json({ error: 'Você não tem permissão para atualizar essa reserva' });
-      }
-  
-      // Atualizando a reserva no banco de dados
-      const reservaAtualizada = await Reserva.update(
-        { dia, horario, qntd_pessoa },
-        { where: { id } }  // Identifica a reserva pelo ID
+      const [result] = await dbPromise.query(
+        'UPDATE reservas SET dia = ?, horario = ?, qntd_pessoa = ? WHERE id = ?',
+        [dia, horario, qntd_pessoa, id]
       );
   
-      if (reservaAtualizada[0] === 0) {
-        // Caso o ID não tenha sido encontrado ou não tenha ocorrido nenhuma atualização
+      if (result.affectedRows === 0) {
         return res.status(404).json({ error: 'Reserva não encontrada ou nenhum dado alterado' });
       }
   
@@ -256,11 +461,10 @@ app.get('/reservas', (req, res) => {
   });
 
   app.put('/reservas/solicitar/:id', (req, res) => {
-    const reservaId = req.params.id; // Obtém o ID da reserva
-    const { motivoFalta } = req.body; // Obtém o motivo da falta do corpo da requisição
+    const reservaId = req.params.id;
+    const { motivoFalta } = req.body; 
     const novoStatus = 'ausente';
 
-    // Atualiza o status e o motivo da falta
     const sql = 'UPDATE reservas SET status = ?, motivoFalta = ? WHERE id = ?';
     db.query(sql, [novoStatus, motivoFalta, reservaId], (err, result) => {
         if (err) {
@@ -308,7 +512,7 @@ app.patch('/reservas/negado/:id', async (req, res) => {
     let sql = `UPDATE reservas SET status = ? ${status === 'negado' ? ', motivoNegacao = ?' : ', motivoNegacao = NULL'} WHERE id = ?`;
     let params = status === 'negado' ? [status, motivoNegacao, reservaId] : [status, reservaId];
 
-    db.query(sql, params, (err, result) => {
+    db.query(sql, params, (err) => {
         if (err) {
             console.error("Erro ao atualizar reserva:", err);
             return res.status(500).json({ error: "Erro ao atualizar reserva" });
@@ -333,10 +537,18 @@ app.patch('/reservas/editar/:id', async (req, res) => {
     }
 });
 
-// Rota para pegar usuários logados
 app.get('/usuarios/logados', (req, res) => {
-  // Consulta SQL para pegar os usuários logados
-  const query = 'SELECT id, nome, sobrenome, telefone, email FROM usuario;';
+  const query = `
+    SELECT DISTINCT 
+      u.id, 
+      u.nome, 
+      u.sobrenome, 
+      u.telefone, 
+      u.email 
+    FROM usuario u
+    INNER JOIN reservas r ON u.id = r.usuario_id
+    ORDER BY u.nome ASC;
+  `;
 
   db.query(query, (err, results) => {
     if (err) {
@@ -344,14 +556,13 @@ app.get('/usuarios/logados', (req, res) => {
       return res.status(500).send('Erro ao buscar usuários logados');
     }
 
-    // Retorna os resultados como resposta JSON
     res.json(results);
   });
 });
 
 app.get('/usuarios/solicitarDados/:id', (req, res) => {
-  const userId = req.params.id; // Pega o ID do parâmetro da URL
-  console.log('ID do usuário recebido:', userId); // Adicione este log para verificar se o ID está sendo capturado corretamente
+  const userId = req.params.id; 
+  console.log('ID do usuário recebido:', userId); 
 
   const query = 'SELECT id, nome, sobrenome, email, telefone FROM usuario WHERE id = ?';
   
@@ -365,34 +576,161 @@ app.get('/usuarios/solicitarDados/:id', (req, res) => {
       return res.status(404).send('Usuário não encontrado ou não está logado');
     }
 
-    res.json(results[0]); // Retorna o usuário logado como JSON
+    res.json(results[0]); 
+  });
+});
+
+app.get('/profissionais', (req, res) => {
+  const query = `
+    SELECT 
+      u.id,
+      u.nome,
+      u.sobrenome,
+      CONCAT(u.nome, ' ', u.sobrenome) as nomeCompleto,
+      u.tipoProfissional,
+      u.email,
+      u.telefone
+    FROM usuario u
+    WHERE u.tipoUsuario = 'profissional' 
+      AND (u.empresa_id IS NULL OR u.empresa_id = 0)
+    ORDER BY u.nome ASC
+  `;
+  
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Erro ao buscar profissionais:', err);
+      return res.status(500).json({ error: 'Erro ao buscar profissionais' });
+    }
+    res.json(results);
+  });
+});
+
+app.get('/profissionais/:categoria', (req, res) => {
+  const { categoria } = req.params;
+  const categoriasValidas = ['medico', 'dentista', 'nutricionista', 'fisioterapeuta', 'fonoaudiologo'];
+  
+  if (!categoriasValidas.includes(categoria)) {
+    return res.status(400).json({ error: 'Categoria inválida' });
+  }
+
+  let query;
+  let queryParams;
+  
+  if (categoria === 'medico') {
+    const especialidadesMedicas = [
+      'Clínico Geral', 'Oftalmologista', 'Cardiologista', 'Dermatologista', 
+      'Pediatra', 'Ginecologista', 'Ortopedista', 'Neurologista', 'Psiquiatra',
+      'Endocrinologista', 'Gastroenterologista', 'Urologista', 'Otorrinolaringologista',
+      'Pneumologista', 'Reumatologista', 'Oncologista', 'Hematologista', 'Nefrologista',
+      'Anestesiologista', 'Radiologista', 'Patologista', 'Medicina do Trabalho',
+      'Medicina Esportiva', 'Geriatra', 'Mastologista', 'Proctologista', 'Angiologista',
+      'Cirurgião Geral', 'Cirurgião Plástico', 'Cirurgião Cardiovascular', 'Neurocirurgião',
+      'Cirurgião Pediátrico'
+    ];
+    
+    const placeholders = especialidadesMedicas.map(() => '?').join(', ');
+    
+    query = `
+      SELECT 
+        u.id,
+        CONCAT(u.nome, ' ', u.sobrenome) as nomeCompleto,
+        u.tipoProfissional,
+        u.email,
+        u.telefone,
+        u.ufRegiao
+      FROM usuario u
+      WHERE u.tipoUsuario = 'profissional' 
+        AND u.tipoProfissional IN (${placeholders})
+        AND (u.empresa_id IS NULL OR u.empresa_id = 0)
+      ORDER BY u.nome ASC
+    `;
+    queryParams = especialidadesMedicas;
+  } else {
+    query = `
+      SELECT 
+        u.id,
+        CONCAT(u.nome, ' ', u.sobrenome) as nomeCompleto,
+        u.tipoProfissional,
+        u.email,
+        u.telefone,
+        u.ufRegiao
+      FROM usuario u
+      WHERE u.tipoUsuario = 'profissional' 
+        AND LOWER(u.tipoProfissional) = ?
+        AND (u.empresa_id IS NULL OR u.empresa_id = 0)
+      ORDER BY u.nome ASC
+    `;
+    queryParams = [categoria];
+  }
+  
+  db.query(query, queryParams, (err, results) => {
+    if (err) {
+      console.error(`Erro ao buscar ${categoria}:`, err);
+      return res.status(500).json({ error: `Erro ao buscar ${categoria}` });
+    }
+    res.json(results);
+  });
+});
+
+app.get('/empresas', (req, res) => {
+  const query = `
+    SELECT 
+      e.id,
+      e.nome as nomeEmpresa,
+      COUNT(DISTINCT u.id) as quantidadeProfissionais,
+      GROUP_CONCAT(DISTINCT CONCAT(u.nome, ' ', u.sobrenome) SEPARATOR ', ') as nomesProfissionais,
+      GROUP_CONCAT(DISTINCT u.tipoProfissional) as tiposProfissionais
+    FROM empresas e
+    LEFT JOIN usuario u ON u.empresa_id = e.id
+    GROUP BY e.id, e.nome
+    ORDER BY e.nome ASC
+  `;
+  
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Erro ao buscar empresas:', err);
+      const fallbackQuery = `
+        SELECT DISTINCT nomeEmpresa, 
+               COUNT(*) as quantidadeProfissionais,
+               GROUP_CONCAT(DISTINCT tipoProfissional) as tiposProfissionais
+        FROM usuario 
+        WHERE fazParteEmpresa = 1 AND nomeEmpresa IS NOT NULL AND nomeEmpresa != ''
+        GROUP BY nomeEmpresa
+        ORDER BY nomeEmpresa ASC
+      `;
+      
+      db.query(fallbackQuery, (err2, results2) => {
+        if (err2) {
+          return res.status(500).json({ error: 'Erro ao buscar empresas' });
+        }
+        res.json(results2);
+      });
+    } else {
+      res.json(results);
+    }
   });
 });
 
 app.post('/api/forgot-password', (req, res) => {
   const { email } = req.body;
 
-  // Verificar se o e-mail existe no banco de dados
   db.query('SELECT id FROM usuario WHERE email = ?', [email], (err, results) => {
     if (err || results.length === 0) {
       return res.status(400).json({ error: 'Usuário não encontrado.' });
     }
 
-    // Retornar o id do usuário encontrado
-    const userId = results[0].id; // Pega o ID do primeiro resultado
-    res.json({ userId }); // Retorna o id para o frontend
+    const userId = results[0].id; 
+    res.json({ userId }); 
   });
 });
 
 app.patch('/api/reset-password/:id', async (req, res) => {
-  const { id } = req.params; // Obtemos o id do usuário a partir dos parâmetros
-  const { senha } = req.body; // Nova senha que será enviada
+  const { id } = req.params; 
+  const { senha } = req.body; 
 
   try {
-    // Criptografando a nova senha
     const hashedPassword = await bcrypt.hash(senha, 10);
 
-    // Atualizando a senha no banco de dados
     const query = 'UPDATE usuario SET senha = ? WHERE id = ?';
 
     db.query(query, [hashedPassword, id], (err, result) => {
@@ -411,10 +749,4 @@ app.patch('/api/reset-password/:id', async (req, res) => {
     console.error(error);
     return res.status(500).json({ message: 'Erro ao processar a senha.' });
   }
-});
-  
-// Inicia o servidor
-const port = process.env.PORT || 4000;
-app.listen(port, () => {
-  console.log(`Servidor rodando na porta ${port}`);
 });

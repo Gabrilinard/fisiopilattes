@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react';
 import axios from 'axios';
-import Footer from '../../components/Footer';
-import { Wrapper, Container, Table, TableWrapper, Th, Td, Button, DaysWrapper, Day, Button_2, Select, Input, Title, Label, DivInputContainer, FormContainer } from './style';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Footer from '../../components/Footer';
 import { useAuth } from "../../contexts/AuthContext";
+import { Button, Button_2, Container, DaysWrapper, DivInputContainer, DrawerContainer, DrawerHeader, DrawerTitle, FormContainer, Input, Label, Select, Table, TableWrapper, Td, Th, Wrapper } from './style';
 
 const AdminDashboard = () => {
   const [nomeReserva, setNomeReserva] = useState('');
-  const [usuariosLogados, setUsuariosLogados] = useState([]);
   const [sobrenomeReserva, setSobrenomeReserva] = useState('');
   const [emailReserva, setEmailReserva] = useState('');
   const [diaReserva, setDiaReserva] = useState('');
@@ -18,37 +17,51 @@ const AdminDashboard = () => {
   const [userId, setUserId] = useState([]);
   const [motivo, setMotivo] = useState('');
   const [mostrarMotivo, setMostrarMotivo] = useState(null);
-  const [showUsuarios, setShowUsuarios] = useState(false);
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [showReservas, setShowReservas] = useState(false);
   const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
-  const [diaSelecionado, setDiaSelecionado] = useState(null); // Novo estado para armazenar o dia selecionado
-  const [reservasPorDia, setReservasPorDia] = useState({
-    Segunda: [],
-    Terça: [],
-    Quarta: [],
-    Quinta: [],
-    Sexta: [],
-    Sábado: [],
-    Domingo: [],
-  });
+  const [reservasPorData, setReservasPorData] = useState({});
+  const [showConsultas, setShowConsultas] = useState(true);
 
-  const diasMap = {
-    segunda: 'Segunda',
-    terça: 'Terça',
-    quarta: 'Quarta',
-    quinta: 'Quinta',
-    sexta: 'Sexta',
-    sábado: 'Sábado',
-    domingo: 'Domingo',
+  const formatarDataExibicao = (dataString) => {
+    if (!dataString) return '';
+    let dataObj;
+    
+    if (dataString instanceof Date) {
+      dataObj = dataString;
+    } else if (typeof dataString === 'string') {
+      let dataParaFormatar = dataString;
+      if (dataString.includes('T')) {
+        dataParaFormatar = dataString.split('T')[0];
+      }
+      const partes = dataParaFormatar.split('-');
+      if (partes.length === 3) {
+        const [ano, mes, dia] = partes;
+        dataObj = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+      } else {
+        dataObj = new Date(dataParaFormatar);
+      }
+    } else {
+      dataObj = new Date(dataString);
+    }
+    
+    if (isNaN(dataObj.getTime())) {
+      return dataString;
+    }
+    
+    const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+    const diaSemana = diasSemana[dataObj.getDay()];
+    const dia = String(dataObj.getDate()).padStart(2, '0');
+    const mes = String(dataObj.getMonth() + 1).padStart(2, '0');
+    const ano = dataObj.getFullYear();
+    
+    return `${diaSemana}, ${dia}/${mes}/${ano}`;
   };
 
   const formatarTelefone = (telefone) => {
-    // Remove tudo que não for número
     const somenteNumeros = telefone.replace(/\D/g, '');
     
-    // Aplica a máscara no formato "86 99427-3418"
     if (somenteNumeros.length <= 2) {
       return somenteNumeros;
     } else if (somenteNumeros.length <= 7) {
@@ -58,18 +71,9 @@ const AdminDashboard = () => {
     }
   };
 
-  const buscarUsuariosLogados = async () => {
-    try {
-      const response = await axios.get('http://localhost:4000/usuarios/logados'); // Substitua com a rota do seu backend
-      setUsuariosLogados(response.data);
-    } catch (error) {
-      console.error('Erro ao buscar usuários logados:', error);
-    }
-  };
-
   const buscarUsuarioPorId = async (id) => {
     try {
-      const response = await axios.get(`http://localhost:4000/usuarios/solicitarDados/${id}`);
+      const response = await axios.get(`http://localhost:3000/usuarios/solicitarDados/${id}`);
       const usuario = response.data;
       setNomeReserva(usuario.nome);
       setSobrenomeReserva(usuario.sobrenome);
@@ -82,63 +86,165 @@ const AdminDashboard = () => {
 
 
   useEffect(() => {
-    buscarUsuariosLogados(); // Chama a função ao carregar o componente
-  }, []);
-
     if (userId) {
       buscarUsuarioPorId(userId);
     }
+  }, [userId]);
 
   useEffect(() => {
-    axios.get('http://localhost:4000/reservas')
+    if (!user || !user.id) return;
+    
+    const url = user.tipoUsuario === 'profissional' 
+      ? `http://localhost:3000/reservas?profissional_id=${user.id}`
+      : 'http://localhost:3000/reservas';
+    
+    console.log('Buscando reservas para:', { userId: user.id, tipoUsuario: user.tipoUsuario, url });
+    
+    axios.get(url)
       .then(response => {
         const reservasData = response.data;
+        console.log('Reservas recebidas:', reservasData);
     
         setReservas(reservasData);
     
-        // Categorize reservas by day
-        const reservasDia = reservasData.reduce((acc, reserva) => {
-            const dia = reserva.dia ? reserva.dia.toLowerCase() : ''; // já está em minúsculas
-            const diaCompleto = diasMap[dia];  // Mapeia corretamente para o nome completo
-  
-          if (diaCompleto) {
-            acc[diaCompleto].push(reserva);  // Adiciona a reserva ao dia correto
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+    
+        const reservasPorDataObj = reservasData.reduce((acc, reserva) => {
+          if (!reserva.dia) return acc;
+          
+          let dataReserva;
+          if (typeof reserva.dia === 'string') {
+            let dataParaFormatar = reserva.dia;
+            if (reserva.dia.includes('T')) {
+              dataParaFormatar = reserva.dia.split('T')[0];
+            }
+            const partes = dataParaFormatar.split('-');
+            if (partes.length === 3) {
+              const [ano, mes, dia] = partes;
+              dataReserva = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+            } else {
+              dataReserva = new Date(dataParaFormatar);
+            }
+          } else {
+            dataReserva = new Date(reserva.dia);
+          }
+          
+          dataReserva.setHours(0, 0, 0, 0);
+          
+          if (dataReserva >= hoje) {
+            const ano = dataReserva.getFullYear();
+            const mes = String(dataReserva.getMonth() + 1).padStart(2, '0');
+            const dia = String(dataReserva.getDate()).padStart(2, '0');
+            const dataKey = `${ano}-${mes}-${dia}`;
+            if (!acc[dataKey]) {
+              acc[dataKey] = [];
+            }
+            acc[dataKey].push(reserva);
           }
     
           return acc;
-        }, {
-          Segunda: [],
-          Terça: [],
-          Quarta: [],
-          Quinta: [],
-          Sexta: [],
-          Sábado: [],
-          Domingo: [],
+        }, {});
+    
+        Object.keys(reservasPorDataObj).forEach(dataKey => {
+          reservasPorDataObj[dataKey].sort((a, b) => {
+            const horarioA = a.horario || '00:00';
+            const horarioB = b.horario || '00:00';
+            return horarioA.localeCompare(horarioB);
+          });
         });
     
-        setReservasPorDia(reservasDia);
+        setReservasPorData(reservasPorDataObj);
+        setShowConsultas(true);
         
       })
-      .catch(error => console.error('Erro ao buscar reservas:', error));
+      .catch(error => console.error('Erro ao buscar consultas:', error));
   }, []);
 
   const atualizarStatus = (id, status) => {
-    axios.patch(`http://localhost:4000/reservas/${id}`, { status })
+    axios.patch(`http://localhost:3000/reservas/${id}`, { status })
       .then(() => {
         setReservas(prevReservas => {
           const updatedReservas = prevReservas.map(reserva =>
             reserva.id === id ? { ...reserva, status } : reserva
           );
   
-          // Atualiza o estado `reservasPorDia` corretamente
-          const updatedReservasPorDia = { ...reservasPorDia };
-          diasDaSemana.forEach(dia => {
-            updatedReservasPorDia[dia] = updatedReservasPorDia[dia].map(reserva =>
+          const reservaAtualizada = updatedReservas.find(r => r.id === id);
+          const updatedReservasPorData = { ...reservasPorData };
+          
+          if (reservaAtualizada && reservaAtualizada.dia) {
+            let dataReserva;
+            if (typeof reservaAtualizada.dia === 'string') {
+              let dataParaFormatar = reservaAtualizada.dia;
+              if (reservaAtualizada.dia.includes('T')) {
+                dataParaFormatar = reservaAtualizada.dia.split('T')[0];
+              }
+              const partes = dataParaFormatar.split('-');
+              if (partes.length === 3) {
+                const [ano, mes, dia] = partes;
+                dataReserva = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+              } else {
+                dataReserva = new Date(dataParaFormatar);
+              }
+            } else {
+              dataReserva = new Date(reservaAtualizada.dia);
+            }
+            
+            dataReserva.setHours(0, 0, 0, 0);
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            
+            if (dataReserva >= hoje) {
+              const ano = dataReserva.getFullYear();
+              const mes = String(dataReserva.getMonth() + 1).padStart(2, '0');
+              const dia = String(dataReserva.getDate()).padStart(2, '0');
+              const dataKey = `${ano}-${mes}-${dia}`;
+              
+              if (!updatedReservasPorData[dataKey]) {
+                updatedReservasPorData[dataKey] = [];
+              }
+              
+              const indexNaData = updatedReservasPorData[dataKey].findIndex(r => r.id === id);
+              if (indexNaData >= 0) {
+                updatedReservasPorData[dataKey][indexNaData] = { ...reservaAtualizada, status };
+              } else {
+                updatedReservasPorData[dataKey].push({ ...reservaAtualizada, status });
+              }
+              
+              updatedReservasPorData[dataKey].sort((a, b) => {
+                const horarioA = a.horario || '00:00';
+                const horarioB = b.horario || '00:00';
+                return horarioA.localeCompare(horarioB);
+              });
+            }
+          }
+          
+          Object.keys(updatedReservasPorData).forEach(dataKey => {
+            updatedReservasPorData[dataKey] = updatedReservasPorData[dataKey].map(reserva =>
               reserva.id === id ? { ...reserva, status } : reserva
             );
           });
-  
-          setReservasPorDia(updatedReservasPorDia);
+
+          setReservasPorData(updatedReservasPorData);
+          
+          if (status === 'confirmado' && reservaAtualizada) {
+            let dataReserva;
+            if (typeof reservaAtualizada.dia === 'string') {
+              if (reservaAtualizada.dia.includes('T')) {
+                dataReserva = new Date(reservaAtualizada.dia.split('T')[0]);
+              } else {
+                dataReserva = new Date(reservaAtualizada.dia);
+              }
+            } else {
+              dataReserva = new Date(reservaAtualizada.dia);
+            }
+            
+            dataReserva.setHours(0, 0, 0, 0);
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            
+          }
+          
           return updatedReservas;
         });
       })
@@ -152,14 +258,14 @@ const AdminDashboard = () => {
   };
 
   const removerReserva = (id) => {
-    if (window.confirm("Tem certeza que deseja remover esta reserva?")) {
-      axios.delete(`http://localhost:4000/reservas/${id}`)
+    if (window.confirm("Tem certeza que deseja remover esta consulta?")) {
+      axios.delete(`http://localhost:3000/reservas/${id}`)
         .then(() => {
           const updatedReservas = reservas.filter(reserva => reserva.id !== id);
           setReservas(updatedReservas);
-          alert('Reserva removida com sucesso!');
+          alert('Consulta removida com sucesso!');
         })
-        .catch(error => console.error('Erro ao remover reserva:', error));
+        .catch(error => console.error('Erro ao remover consulta:', error));
     }
   };
 
@@ -169,7 +275,7 @@ const AdminDashboard = () => {
       return;
     }
 
-    axios.patch(`http://localhost:4000/reservas/negado/${reserva.id}`, { 
+    axios.patch(`http://localhost:3000/reservas/negado/${reserva.id}`, { 
       status: 'negado', 
       motivoNegacao: motivo 
     })
@@ -177,14 +283,11 @@ const AdminDashboard = () => {
       setReservas(prevReservas => prevReservas.map(r =>
         r.id === reserva.id ? { ...r, status: 'negado', motivoNegacao: motivo } : r
       ));
-      alert('Reserva negada com sucesso!');
-      setMotivo(''); // Limpar o campo de motivo após negação
-      setMostrarMotivo(null); // Fechar o campo de input após o envio
+      alert('Consulta negada com sucesso!');
+      setMotivo(''); 
+      setMostrarMotivo(null);
     })
-    .catch(error => console.error('Erro ao negar reserva:', error));
-  };
-  const selecionarDia = (dia) => {
-    setDiaSelecionado(dia === diaSelecionado ? null : dia); // Se o dia já está selecionado, desmarcar
+    .catch(error => console.error('Erro ao negar consulta:', error));
   };
 
   const handleLogout = () => {
@@ -198,7 +301,7 @@ const AdminDashboard = () => {
       const horarioFinal = new Date(horarioInicial.getTime() + 60 * 60 * 1000); // Adicionando 1 hora
       const horarioFinalFormatado = `${horarioFinal.getHours().toString().padStart(2, '0')}:${horarioFinal.getMinutes().toString().padStart(2, '0')}`;
 
-      await axios.post('http://localhost:4000/reservas', {
+      await axios.post('http://localhost:3000/reservas', {
         nome: nomeReserva,
         sobrenome: sobrenomeReserva,
         email: emailReserva,
@@ -206,12 +309,12 @@ const AdminDashboard = () => {
         horario: horarioReserva,
         horarioFinal: horarioFinalFormatado,
         qntd_pessoa: qntdPessoas,
-        telefone: telefoneReserva, // Enviar o telefone formatado
+        telefone: telefoneReserva, //
         usuario_id: userId,
         status: 'pendente',
       });
 
-      alert('Reserva criada com sucesso!');
+      alert('Consulta criada com sucesso!');
       setNomeReserva('');
       setSobrenomeReserva('');
       setEmailReserva('');
@@ -221,69 +324,260 @@ const AdminDashboard = () => {
       setQntdPessoas('');
       window.location.reload();
     } catch (error) {
-      console.error('Erro ao criar reserva:', error);
-      alert('Erro ao criar reserva.');
+      console.error('Erro ao criar consulta:', error);
+      alert('Erro ao criar consulta.');
     }
   };
-  const toggleUsuarios = () => {
-    setShowUsuarios(prevState => !prevState);
-  };
-
-  const diasDaSemana = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
-
   return (
     <Wrapper>
-      <header style={{ backgroundColor: 'black', padding: '10px', color: 'white', display: 'flex', justifyContent: 'flex-end' }}>
-        <Button onClick={handleLogout} style={{ backgroundColor: 'red', color: 'white' }}>
-          Sair
-        </Button>
+      <header style={{ 
+        backgroundColor: 'rgb(227, 228, 222)', 
+        padding: '20px', 
+        position: 'relative'
+      }}>
+        <h2 style={{ 
+          margin: 0, 
+          color: '#333', 
+          textAlign: 'center',
+          marginBottom: '15px'
+        }}>
+          Painel do Administrador
+        </h2>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center'
+        }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <Button_2 onClick={() => {
+              setShowConsultas(true);
+              setShowReservas(false);
+            }}>
+              Ver Consultas
+            </Button_2>
+            <Button_2 onClick={() => setShowForm(true)}>
+              Criar Consulta
+            </Button_2>
+            <Button_2 onClick={() => {
+              setShowReservas(true);
+              setShowConsultas(false);
+            }}>
+              Ver Solicitações
+            </Button_2>
+          </div>
+          <Button onClick={handleLogout} style={{ backgroundColor: 'red', color: 'white' }}>
+            Sair
+          </Button>
+        </div>
       </header>
       <Container>
-        <h2>Painel do Administrador</h2>
-        <Button_2 onClick={toggleUsuarios}>
-          {showUsuarios ? 'Esconder Usuários' : 'Ver Usuários'}
-        </Button_2>
-  
-        {/* Exibir usuários se o estado `showUsuarios` for true */}
-        {showUsuarios && (
-          <div>
-            <h3>Usuários Cadastrados</h3>
-            <TableWrapper>
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>ID</Th>
-                    <Th>Nome</Th>
-                    <Th>Sobrenome</Th>
-                    <Th>Email</Th>
-                    <Th>Telefone</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {usuariosLogados.map((usuario) => (
-                    <tr key={usuario.id}>
-                      <Td>{usuario.id}</Td>
-                      <Td>{usuario.nome}</Td>
-                      <Td>{usuario.sobrenome}</Td>
-                      <Td>{usuario.email}</Td>
-                      <Td>{usuario.telefone}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </TableWrapper>
-          </div>
-        )}
         <div>
+      {showReservas && (
+        <TableWrapper>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Nome</Th>
+                <Th>Email</Th>
+                <Th>Telefone</Th>
+                <Th>Dia</Th>
+                <Th>Horário</Th>
+                <Th>Status</Th>
+                <Th>Tempo de Falta</Th>
+                <Th>Ações</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {reservas.map(reserva => (
+                <tr key={reserva.id}>
+                  <Td>{reserva.nome} {reserva.sobrenome}</Td>
+                  <Td>{reserva.email}</Td>
+                  <Td>{reserva.telefone}</Td>
+                  <Td>{formatarDataExibicao(reserva.dia)}</Td>
+                  <Td>{reserva.horario}</Td>
+                  <Td>{reserva.status}</Td>
+                  <Td>{reserva.motivoFalta}</Td>
+                  <Td>
+                    {reserva.status === 'confirmado' ? (
+                      <Button onClick={() => toggleStatus(reserva)} style={{ background: 'orange', color: 'white' }}>
+                        Tirar Confirmação
+                      </Button>
+                    ) : (
+                      <Button onClick={() => toggleStatus(reserva)} style={{ background: 'green', color: 'white' }}>
+                        Confirmar
+                      </Button>
+                    )}
 
-      <Button_2 onClick={() => setShowForm(!showForm)}>
-        {showForm ? 'Esconder Reserva' : 'Criar Reserva'}
-      </Button_2>
+                    <Button onClick={() => setMostrarMotivo(reserva.id)} style={{ backgroundColor: 'red', color: 'white' }}>
+                      Negar
+                    </Button>
 
-      {showForm && (
-        <FormContainer>
-          <Title>Criar Reserva</Title>
+                    {mostrarMotivo === reserva.id && (
+                      <div>
+                        <input
+                          type="text"
+                          value={motivo}
+                          onChange={(e) => setMotivo(e.target.value)}
+                          placeholder="Digite o motivo da negação"
+                          style={{
+                            padding: '8px',
+                            width: '300px',
+                            margin: '10px 0',
+                            display: 'block',
+                          }}
+                        />
+                        <div style={{ marginTop: '10px' }}>
+                          <button
+                            onClick={() => negarReserva(reserva)}
+                            style={{
+                              backgroundColor: 'green',
+                              color: 'white',
+                              marginRight: '10px', 
+                            }}
+                          >
+                            Confirmar Negação
+                          </button>
 
+                          <button
+                            onClick={() => setMostrarMotivo(null)}
+                            style={{
+                              backgroundColor: 'gray',
+                              color: 'white',
+                            }}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <Button onClick={() => removerReserva(reserva.id)} style={{ background: 'red', color: 'white' }}>
+                      Remover
+                    </Button>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrapper>
+      )}
+    </div>
+
+        {showConsultas && (
+          <DaysWrapper>
+            {(() => {
+              const todasReservasConfirmadas = reservas.filter(r => r && r.status === 'confirmado');
+              
+              if (todasReservasConfirmadas.length === 0) {
+                return (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '40px 20px', 
+                    fontSize: '18px', 
+                    color: '#666', 
+                    width: '100%',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    minHeight: '60vh',
+                    margin: '0 auto',
+                    gridColumn: '1 / -1'
+                  }}>
+                    Nenhuma Consulta Marcada
+                  </div>
+                );
+              }
+
+              const reservasPorDataConfirmadas = todasReservasConfirmadas.reduce((acc, reserva) => {
+                if (!reserva.dia) return acc;
+                
+                let dataReserva;
+                if (typeof reserva.dia === 'string') {
+                  let dataParaFormatar = reserva.dia;
+                  if (reserva.dia.includes('T')) {
+                    dataParaFormatar = reserva.dia.split('T')[0];
+                  }
+                  const partes = dataParaFormatar.split('-');
+                  if (partes.length === 3) {
+                    const [ano, mes, dia] = partes;
+                    dataReserva = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+                  } else {
+                    dataReserva = new Date(dataParaFormatar);
+                  }
+                } else {
+                  dataReserva = new Date(reserva.dia);
+                }
+                
+                dataReserva.setHours(0, 0, 0, 0);
+                const hoje = new Date();
+                hoje.setHours(0, 0, 0, 0);
+                
+                if (dataReserva >= hoje) {
+                  const dataKey = dataReserva.toISOString().split('T')[0];
+                  if (!acc[dataKey]) {
+                    acc[dataKey] = [];
+                  }
+                  acc[dataKey].push(reserva);
+                }
+                
+                return acc;
+              }, {});
+
+              const datasComConsultas = Object.keys(reservasPorDataConfirmadas)
+                .sort((a, b) => a.localeCompare(b));
+
+              return datasComConsultas.map((dataKey) => {
+                const reservasDoDia = reservasPorDataConfirmadas[dataKey]
+                  .sort((a, b) => {
+                    const horarioA = a.horario || '00:00';
+                    const horarioB = b.horario || '00:00';
+                    return horarioA.localeCompare(horarioB);
+                  });
+
+                return (
+                  <div key={dataKey} style={{
+                    backgroundColor: '#f1f1f1',
+                    padding: '20px',
+                    borderRadius: '8px',
+                    marginBottom: '15px',
+                    border: '1px solid #ddd'
+                  }}>
+                    <h3 style={{ 
+                      margin: '0 0 15px 0', 
+                      color: '#333',
+                      fontSize: '18px',
+                      fontWeight: 'bold'
+                    }}>
+                      {formatarDataExibicao(dataKey)}
+                    </h3>
+                    <div style={{ marginTop: '10px' }}>
+                      {reservasDoDia.map(reserva => (
+                        <div key={reserva.id} style={{
+                          padding: '10px',
+                          marginBottom: '8px',
+                          backgroundColor: '#fff',
+                          borderRadius: '4px',
+                          borderLeft: '3px solid #4caf50'
+                        }}>
+                          <strong>{reserva.horario}</strong> - {reserva.nome} {reserva.sobrenome}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </DaysWrapper>
+        )}
+
+      </Container>
+      
+      <DrawerContainer isOpen={showForm}>
+        <DrawerHeader>
+          <DrawerTitle>Criar Consulta</DrawerTitle>
+        </DrawerHeader>
+        
+        <FormContainer style={{ maxWidth: '100%', boxShadow: 'none', padding: 0 }}>
           <Input
             type="number"
             value={userId}
@@ -355,145 +649,12 @@ const AdminDashboard = () => {
             placeholder="Quantidade de Pessoas"
           />
 
-          <Button onClick={handleCreateReserva}>
-            Criar Reserva
+          <Button onClick={handleCreateReserva} style={{ width: '100%', marginTop: '10px' }}>
+            Criar Consulta
           </Button>
         </FormContainer>
-      )}
-    </div>
-        
-        <div>
-      {/* Botão para mostrar/esconder as reservas */}
-      <Button_2 onClick={() => setShowReservas(!showReservas)}>
-        {showReservas ? 'Esconder Reservas' : ' Visualizar Reservas'}
-      </Button_2>
+      </DrawerContainer>
 
-      {/* Tabela de reservas */}
-      {showReservas && (
-        <TableWrapper>
-          <Table>
-            <thead>
-              <tr>
-                <Th>Nome</Th>
-                <Th>Email</Th>
-                <Th>Telefone</Th>
-                <Th>Dia</Th>
-                <Th>Horário</Th>
-                <Th>Horário Final</Th>
-                <Th>Qtd Pessoas</Th>
-                <Th>Status</Th>
-                <Th>Tempo de Falta</Th>
-                <Th>Ações</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {reservas.map(reserva => (
-                <tr key={reserva.id}>
-                  <Td>{reserva.nome} {reserva.sobrenome}</Td>
-                  <Td>{reserva.email}</Td>
-                  <Td>{reserva.telefone}</Td>
-                  <Td>{reserva.dia}</Td>
-                  <Td>{reserva.horario}</Td>
-                  <Td>{reserva.horarioFinal}</Td>
-                  <Td>{reserva.qntd_pessoa}</Td>
-                  <Td>{reserva.status}</Td>
-                  <Td>{reserva.motivoFalta}</Td>
-                  <Td>
-                    {reserva.status === 'confirmado' ? (
-                      <Button onClick={() => toggleStatus(reserva)} style={{ background: 'orange', color: 'white' }}>
-                        Tirar Confirmação
-                      </Button>
-                    ) : (
-                      <Button onClick={() => toggleStatus(reserva)} style={{ background: 'green', color: 'white' }}>
-                        Confirmar
-                      </Button>
-                    )}
-
-                    <Button onClick={() => setMostrarMotivo(reserva.id)} style={{ backgroundColor: 'red', color: 'white' }}>
-                      Negar
-                    </Button>
-
-                    {/* Mostrar o campo de input de motivo se o botão foi clicado */}
-                    {mostrarMotivo === reserva.id && (
-                      <div>
-                        <input
-                          type="text"
-                          value={motivo}
-                          onChange={(e) => setMotivo(e.target.value)}
-                          placeholder="Digite o motivo da negação"
-                          style={{
-                            padding: '8px',
-                            width: '300px',
-                            margin: '10px 0',
-                            display: 'block', // Garante que o input fique acima dos botões
-                          }}
-                        />
-                        {/* Botões embaixo do campo de input */}
-                        <div style={{ marginTop: '10px' }}>
-                          <button
-                            onClick={() => negarReserva(reserva)}
-                            style={{
-                              backgroundColor: 'green',
-                              color: 'white',
-                              marginRight: '10px', // Espaçamento entre os botões
-                            }}
-                          >
-                            Confirmar Negação
-                          </button>
-
-                          <button
-                            onClick={() => setMostrarMotivo(null)}
-                            style={{
-                              backgroundColor: 'gray',
-                              color: 'white',
-                            }}
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    <Button onClick={() => removerReserva(reserva.id)} style={{ background: 'red', color: 'white' }}>
-                      Remover
-                    </Button>
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </TableWrapper>
-      )}
-    </div>
-
-        <DaysWrapper>
-          {diasDaSemana.map((dia, index) => {
-            const reservasConfirmadas = reservasPorDia[dia]
-              .filter(reserva => reserva.status === 'confirmado')
-              .sort((a, b) => a.horario.localeCompare(b.horario));
-
-            return (
-              <Day key={index} onClick={() => selecionarDia(dia)}>
-                <h3>{dia}</h3>
-                {diaSelecionado === dia && (
-                  <ul>
-                    {reservasConfirmadas.length > 0 ? (
-                      reservasConfirmadas.map(reserva => (
-                        <li key={reserva.id}>
-                          {reserva.nome} {reserva.sobrenome} - {reserva.horario} - Pessoas: {reserva.qntd_pessoa}
-                        </li>
-                      ))
-                    ) : (
-                      <li>Nenhuma aula marcada</li>
-                    )}
-                  </ul>
-                )}
-              </Day>
-            );
-          })}
-        </DaysWrapper>
-
-      </Container>
       <Footer />
     </Wrapper>
   );

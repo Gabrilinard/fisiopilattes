@@ -252,6 +252,39 @@ export const Label = styled.label`
   margin-bottom: 5px;
 `;
 
+export const TituloAgendamento = styled.h2`
+  font-size: 2rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20px;
+  text-align: center;
+  font-family: 'Sansita', sans-serif;
+
+  @media (max-width: 768px) {
+    font-size: 1.5rem;
+  }
+`;
+
+export const DatePickerWrapper = styled.div`
+  width: 100%;
+  
+  .react-datepicker-wrapper {
+    width: 100%;
+  }
+  
+  .react-datepicker__input-container {
+    width: 100%;
+    
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 1rem;
+    }
+  }
+`;
+
 
 
 

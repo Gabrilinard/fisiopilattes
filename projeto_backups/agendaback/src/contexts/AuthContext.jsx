@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { createContext, useContext, useEffect, useState } from 'react';
 
 const AuthContext = createContext();
 
@@ -21,15 +21,16 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, senha) => {
     try {
-      const { data } = await axios.post('http://localhost:4000/login', { email, senha });
+      const { data } = await axios.post('http://localhost:3000/login', { email, senha });
       if (data.user) {
         setUser(data.user);
         localStorage.setItem('user', JSON.stringify(data.user));
-        return true;
+        return data.user;
       }
+      return null;
     } catch (error) {
       console.error('Erro no login:', error);
-      return false;
+      return null;
     }
   };
 
@@ -80,3 +81,4 @@ export const AuthProvider = ({ children }) => {
 export const useAuth = () => useContext(AuthContext);
 
 export { AuthContext };
+
