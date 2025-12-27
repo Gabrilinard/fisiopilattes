@@ -5,6 +5,7 @@ import styled from 'styled-components';
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 
 
 const PageWrapper = styled.div`
@@ -106,6 +107,7 @@ const Login = () => {
   const [senha, setSenha] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
+  const { error: showError } = useNotification();
   const navigate = useNavigate();
 
   const senhaRef = useRef(null);
@@ -128,7 +130,7 @@ const handleEmailKeyDown = (e) => {
       navigate('/');
     }
   } else {
-    alert('E-mail ou senha incorretos.');
+    showError('E-mail ou senha incorretos.');
   }
 };
 

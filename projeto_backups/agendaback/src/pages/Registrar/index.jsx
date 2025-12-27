@@ -1,11 +1,22 @@
 import axios from 'axios';
-import { useState } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { useEffect, useState } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 const Container = styled.div`
   display: flex;
@@ -106,6 +117,56 @@ const LoginButton = styled.button`
   }
 `;
 
+const MapWrapper = styled.div`
+  width: 100%;
+  height: 400px;
+  margin: 15px 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  overflow: hidden;
+  
+  .leaflet-container {
+    height: 100%;
+    width: 100%;
+  }
+`;
+
+const LocationPicker = ({ onLocationSelect, initialLat, initialLng }) => {
+  const [position, setPosition] = useState(initialLat && initialLng ? [initialLat, initialLng] : [-14.235, -51.9253]);
+
+  useEffect(() => {
+    if (initialLat && initialLng) {
+      setPosition([initialLat, initialLng]);
+    }
+  }, [initialLat, initialLng]);
+
+  function LocationMarker() {
+    useMapEvents({
+      click(e) {
+        const { lat, lng } = e.latlng;
+        setPosition([lat, lng]);
+        onLocationSelect(lat, lng);
+      },
+    });
+
+    return position === null ? null : <Marker position={position} />;
+  }
+
+  return (
+    <MapContainer
+      center={position}
+      zoom={6}
+      style={{ height: '100%', width: '100%' }}
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      <LocationMarker />
+    </MapContainer>
+  );
+};
+
 const Registro = () => {
   const [nome, setNome] = useState('');
   const [sobrenome, setSobrenome] = useState('');
@@ -122,8 +183,95 @@ const Registro = () => {
   const [profissaoCustomizada, setProfissaoCustomizada] = useState('');
   const [numeroConselho, setNumeroConselho] = useState('');
   const [ufRegiao, setUfRegiao] = useState('');
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
+  const [cidade, setCidade] = useState('');
+  const [showMap, setShowMap] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { success, error: showError } = useNotification();
+
+  const converterEstadoParaSigla = (estadoNome) => {
+    const estadosMap = {
+      'acre': 'AC',
+      'alagoas': 'AL',
+      'amapá': 'AP',
+      'amazonas': 'AM',
+      'bahia': 'BA',
+      'ceará': 'CE',
+      'distrito federal': 'DF',
+      'espírito santo': 'ES',
+      'goiás': 'GO',
+      'maranhão': 'MA',
+      'mato grosso': 'MT',
+      'mato grosso do sul': 'MS',
+      'minas gerais': 'MG',
+      'pará': 'PA',
+      'paraíba': 'PB',
+      'paraná': 'PR',
+      'pernambuco': 'PE',
+      'piauí': 'PI',
+      'rio de janeiro': 'RJ',
+      'rio grande do norte': 'RN',
+      'rio grande do sul': 'RS',
+      'rondônia': 'RO',
+      'roraima': 'RR',
+      'santa catarina': 'SC',
+      'são paulo': 'SP',
+      'sergipe': 'SE',
+      'tocantins': 'TO'
+    };
+
+    if (!estadoNome) return null;
+
+    const estadoNormalizado = estadoNome.toLowerCase().trim();
+    
+    if (estadosMap[estadoNormalizado]) {
+      return estadosMap[estadoNormalizado];
+    }
+
+    if (estadoNome.length === 2 && /^[A-Z]{2}$/i.test(estadoNome)) {
+      return estadoNome.toUpperCase();
+    }
+
+    return null;
+  };
+
+  const buscarLocalizacao = async (lat, lng) => {
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=pt-BR`);
+      const data = await response.json();
+      
+      if (data && data.address) {
+        let uf = data.address.state_code || data.address.state;
+        const cidadeNome = data.address.city || data.address.town || data.address.village || data.address.municipality || data.address.county || '';
+        
+        if (uf) {
+          let ufLimpo = uf.replace(/^[A-Z]{2}-/, '').toUpperCase();
+          
+          if (ufLimpo.length > 2) {
+            const sigla = converterEstadoParaSigla(ufLimpo);
+            if (sigla) {
+              ufLimpo = sigla;
+            }
+          }
+          
+          setUfRegiao(ufLimpo);
+        }
+        if (cidadeNome) {
+          setCidade(cidadeNome);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao buscar localização:', error);
+    }
+  };
+
+  const handleMapClick = (lat, lng) => {
+    setLatitude(lat);
+    setLongitude(lng);
+    buscarLocalizacao(lat, lng);
+  };
 
   const formatarNumeroConselho = (valor, tipoProfissional) => {
     if (!valor) return '';
@@ -222,30 +370,30 @@ const Registro = () => {
     const senhaValida = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
   
     if (!senhaValida.test(senha)) {
-      alert('A senha deve ter no mínimo 8 caracteres, incluindo pelo menos um número e uma letra maiúscula.');
+      showError('A senha deve ter no mínimo 8 caracteres, incluindo pelo menos um número e uma letra maiúscula.');
       return;
     }
   
     if (senha !== confirmarSenha) {
-      alert('As senhas não coincidem!');
+      showError('As senhas não coincidem!');
       return;
     }
 
     if (tipoUsuario === 'profissional') {
       if (!tipoProfissional) {
-        alert('Por favor, selecione o tipo de profissional.');
+        showError('Por favor, selecione o tipo de profissional.');
         return;
       }
       if (tipoProfissional === 'medico' && !especialidadeMedica) {
-        alert('Por favor, selecione sua especialidade médica.');
+        showError('Por favor, selecione sua especialidade médica.');
         return;
       }
       if (tipoProfissional === 'outros' && !profissaoCustomizada.trim()) {
-        alert('Por favor, informe sua profissão.');
+        showError('Por favor, informe sua profissão.');
         return;
       }
       if (!numeroConselho || !numeroConselho.trim()) {
-        alert('Por favor, informe o número do conselho.');
+        showError('Por favor, informe o número do conselho.');
         return;
       }
       if (!validarNumeroConselho(numeroConselho, tipoProfissional)) {
@@ -269,35 +417,54 @@ const Registro = () => {
           default:
             mensagemErro += 'Formato inválido (3 a 10 dígitos)';
         }
-        alert(mensagemErro);
+        showError(mensagemErro);
+        return;
+      }
+      if (!latitude || !longitude) {
+        showError('Por favor, selecione sua localização no mapa.');
         return;
       }
       if (!ufRegiao || !ufRegiao.trim()) {
-        alert('Por favor, selecione a UF/Região.');
+        showError('Por favor, selecione a UF/Região no mapa.');
+        return;
+      }
+      if (!cidade || !cidade.trim()) {
+        showError('Por favor, selecione sua cidade no mapa.');
         return;
       }
     }
   
     try {
+      const tipoUsuarioFinal = tipoUsuario || 'paciente';
+      
       const dadosRegistro = {
         nome,
         sobrenome,
         telefone,
         email,
         senha,
-        tipoUsuario,
-        ...(tipoUsuario === 'profissional' && {
+        tipoUsuario: tipoUsuarioFinal,
+        ...(tipoUsuarioFinal === 'profissional' && {
           tipoProfissional: tipoProfissional === 'outros' ? profissaoCustomizada : tipoProfissional,
           especialidadeMedica: tipoProfissional === 'medico' ? especialidadeMedica : null,
           profissaoCustomizada: tipoProfissional === 'outros' ? profissaoCustomizada : null,
           numeroConselho: numeroConselho.trim(),
-          ufRegiao: ufRegiao.trim()
+          ufRegiao: ufRegiao.trim(),
+          latitude: latitude,
+          longitude: longitude,
+          cidade: cidade.trim()
         })
       };
 
+      console.log('=== DADOS ENVIADOS PARA O BACKEND ===');
+      console.log('tipoUsuario do state:', tipoUsuario);
+      console.log('tipoUsuarioFinal que será enviado:', tipoUsuarioFinal);
+      console.log('dadosRegistro completo:', JSON.stringify(dadosRegistro, null, 2));
+      console.log('tipoUsuario no objeto enviado:', dadosRegistro.tipoUsuario);
+      
       const response = await axios.post('http://localhost:3000/register', dadosRegistro);
       console.log(response.data);
-      alert('Usuário cadastrado com sucesso!');
+      success('Usuário cadastrado com sucesso!');
       
       if (tipoUsuario === 'profissional') {
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -312,7 +479,7 @@ const Registro = () => {
       }
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.error || 'Erro ao registrar. Tente novamente.');
+      showError(error.response?.data?.error || 'Erro ao registrar. Tente novamente.');
     }
   };
   
@@ -467,40 +634,38 @@ const Registro = () => {
                 required
               />
 
-              <Select
-                value={ufRegiao}
-                onChange={(e) => setUfRegiao(e.target.value)}
-                required
-              >
-                <option value="">Selecione a UF/Região</option>
-                <option value="AC">AC - Acre</option>
-                <option value="AL">AL - Alagoas</option>
-                <option value="AP">AP - Amapá</option>
-                <option value="AM">AM - Amazonas</option>
-                <option value="BA">BA - Bahia</option>
-                <option value="CE">CE - Ceará</option>
-                <option value="DF">DF - Distrito Federal</option>
-                <option value="ES">ES - Espírito Santo</option>
-                <option value="GO">GO - Goiás</option>
-                <option value="MA">MA - Maranhão</option>
-                <option value="MT">MT - Mato Grosso</option>
-                <option value="MS">MS - Mato Grosso do Sul</option>
-                <option value="MG">MG - Minas Gerais</option>
-                <option value="PA">PA - Pará</option>
-                <option value="PB">PB - Paraíba</option>
-                <option value="PR">PR - Paraná</option>
-                <option value="PE">PE - Pernambuco</option>
-                <option value="PI">PI - Piauí</option>
-                <option value="RJ">RJ - Rio de Janeiro</option>
-                <option value="RN">RN - Rio Grande do Norte</option>
-                <option value="RS">RS - Rio Grande do Sul</option>
-                <option value="RO">RO - Rondônia</option>
-                <option value="RR">RR - Roraima</option>
-                <option value="SC">SC - Santa Catarina</option>
-                <option value="SP">SP - São Paulo</option>
-                <option value="SE">SE - Sergipe</option>
-                <option value="TO">TO - Tocantins</option>
-              </Select>
+              <label>Selecione sua localização no mapa:</label>
+              <Button type="button" onClick={() => setShowMap(!showMap)} style={{ marginBottom: '10px' }}>
+                {showMap ? 'Ocultar Mapa' : 'Mostrar Mapa'}
+              </Button>
+              
+              {showMap && (
+                <MapWrapper>
+                  <LocationPicker onLocationSelect={handleMapClick} />
+                </MapWrapper>
+              )}
+              
+              {latitude && longitude && (
+                <>
+                  <Input
+                    type="text"
+                    value={ufRegiao}
+                    placeholder="UF/Região (preenchido automaticamente)"
+                    readOnly
+                    style={{ backgroundColor: '#f0f0f0' }}
+                  />
+                  <Input
+                    type="text"
+                    value={cidade}
+                    placeholder="Cidade (preenchida automaticamente)"
+                    readOnly
+                    style={{ backgroundColor: '#f0f0f0' }}
+                  />
+                  <p style={{ fontSize: '12px', color: '#666', margin: '5px 0' }}>
+                    Localização selecionada: {latitude.toFixed(6)}, {longitude.toFixed(6)}
+                  </p>
+                </>
+              )}
             </>
           )}
           

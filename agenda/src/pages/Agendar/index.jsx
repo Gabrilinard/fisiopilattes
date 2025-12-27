@@ -8,12 +8,14 @@ import { useLocation } from 'react-router-dom';
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import { Button, Button_geral, Container, Container_Important, ContainerEdicao, ContainerGeral, DatePickerWrapper, Div, Div_2, FormularioReserva, H3, Input, Label, Linha, Lista, MensagemStatus, Paragrafo, Reserva_2, ReservaItem, ReservasContainer, Selecao, TituloAgendamento } from './style';
 
 const Agendar = () => {
   const { user } = useAuth();
   const location = useLocation();
   const { nome } = location.state || {};
+  const { success, error: showError, warning } = useNotification();
   const [dataSelecionada, setDataSelecionada] = useState(new Date());
   const [horario, setHorario] = useState('');
   const [tempoFalta, setTempoFalta] = useState({});
@@ -135,8 +137,8 @@ const Agendar = () => {
               })
               .catch(error => console.error('Erro ao buscar consultas:', error));
           } else {
-            axios.get(`http://localhost:3000/reservas/${user.id}`)
-              .then(response => {
+      axios.get(`http://localhost:3000/reservas/${user.id}`)
+        .then(response => {
                 const reservasFormatadas = response.data.map(reserva => ({
                   ...reserva,
                   horario: formatarHorarioBrasil(reserva.horario)
@@ -160,7 +162,7 @@ const Agendar = () => {
         });
     } else if (user && user.id) {
       axios.get(`http://localhost:3000/reservas/${user.id}`)
-        .then(response => {
+      .then(response => {
           const reservasFormatadas = response.data.map(reserva => ({
             ...reserva,
             horario: formatarHorarioBrasil(reserva.horario)
@@ -179,31 +181,15 @@ const Agendar = () => {
     return `${novaHora.toString().padStart(2, '0')}:${minuto.toString().padStart(2, '0')}`;
   };
 
-  const handleHorarioChange = (e) => {
-    let novoHorario = e.target.value;
-    
-    if (novoHorario && novoHorario.includes(' ')) {
-      const partes = novoHorario.split(' ');
-      if (partes.length >= 2) {
-        const horaMinuto = partes[0];
-        const periodo = partes[1].toUpperCase();
-        const [hora, minuto] = horaMinuto.split(':');
-        let horas = parseInt(hora, 10);
-        
-        if (periodo === 'PM' && horas !== 12) {
-          horas += 12;
-        } else if (periodo === 'AM' && horas === 12) {
-          horas = 0;
-        }
-        
-        novoHorario = `${String(horas).padStart(2, '0')}:${minuto}`;
+
+  useEffect(() => {
+    if (horario && !horario.match(/^\d{2}:\d{2}$/)) {
+      const horarioFormatado = formatarHorarioBrasil(horario);
+      if (horarioFormatado && horarioFormatado.match(/^\d{2}:\d{2}$/)) {
+        setHorario(horarioFormatado);
       }
     }
-    
-    const horarioFormatado = formatarHorarioBrasil(novoHorario);
-    setHorario(horarioFormatado);
-    setHorarioFinal(calcularHorarioFinal(horarioFormatado));
-  };
+  }, [horario]);
 
   const sendEmailNotification = (userEmail, userName, solicitCount, faltasCount, edicoesCount) => {
     const adminName = 'Italo';
@@ -269,7 +255,7 @@ const handleReserva = async (e) => {
   if (!user) return;
 
   if (!dataSelecionada || !horario) {
-    alert('Por favor, preencha todos os campos corretamente.');
+    showError('Por favor, preencha todos os campos corretamente.');
     return;
   }
 
@@ -307,7 +293,7 @@ const handleReserva = async (e) => {
     sendEmailNotification(user.email, user.nome, solicitCount, faltasCount, edicoesCount);
   } catch (error) {
     console.error('Erro ao fazer consulta:', error);
-      alert('Erro ao tentar fazer a consulta. Tente novamente.');
+      showError('Erro ao tentar fazer a consulta. Tente novamente.');
   }
 };
  
@@ -315,7 +301,7 @@ const handleReserva = async (e) => {
     const tempo = tempoFalta[id]; 
 
     if (!tempo) {
-        alert("Por favor, insira o tempo da falta.");
+        showError("Por favor, insira o tempo da falta.");
         return;
     }
 
@@ -331,7 +317,7 @@ const handleReserva = async (e) => {
 
         setFaltasCount(prevCount => prevCount + 1);
 
-        alert("Falta registrada com sucesso!");
+        success("Falta registrada com sucesso!");
         sendEmailNotification(user.email, user.nome, solicitCount, faltasCount, edicoesCount);
     } catch (error) {
         console.error('Erro ao marcar falta:', error);
@@ -339,12 +325,47 @@ const handleReserva = async (e) => {
 };
 
 const handleEditar = (id) => {
+  try {
   const reserva = reservas.find(reserva => reserva.id === id);
   if (reserva) {
     setReservaEditando(reserva);
-    const dataReserva = reserva.dia ? new Date(reserva.dia + 'T00:00:00') : new Date();
+
+      let dataReserva = new Date();
+      if (reserva.dia) {
+        try {
+          if (typeof reserva.dia === 'string') {
+            let dataParaFormatar = reserva.dia;
+            if (reserva.dia.includes('T')) {
+              dataParaFormatar = reserva.dia.split('T')[0];
+            }
+            const partes = dataParaFormatar.split('-');
+            if (partes.length === 3) {
+              const [ano, mes, dia] = partes;
+              dataReserva = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+            } else {
+              dataReserva = new Date(dataParaFormatar + 'T00:00:00');
+            }
+          } else {
+            dataReserva = new Date(reserva.dia);
+          }
+        } catch (e) {
+          console.error('Erro ao processar data:', e);
+          dataReserva = new Date();
+        }
+      }
+      
+      if (isNaN(dataReserva.getTime())) {
+        dataReserva = new Date();
+      }
+      
     setNovaData(dataReserva);
-    setNovoHorario(formatarHorarioBrasil(reserva.horario));
+      
+      const horarioFormatado = reserva.horario ? formatarHorarioBrasil(reserva.horario) : '';
+      setNovoHorario(horarioFormatado || '');
+    }
+  } catch (error) {
+    console.error('Erro ao editar reserva:', error);
+    showError('Erro ao abrir edição. Tente novamente.');
   }
 };
 
@@ -354,12 +375,12 @@ const validarHorario = (horario) => {
 
 const handleSalvarEdicao = async () => {
   if (!novaData) {
-    alert("Data inválida.");
+    showError("Data inválida.");
     return;
   }
 
   if (!validarHorario(novoHorario)) {
-    alert("Horário inválido! Use o formato HH:MM.");
+    showError("Horário inválido! Use o formato HH:MM.");
     return;
   }
 
@@ -369,7 +390,7 @@ const handleSalvarEdicao = async () => {
     const reservaId = reservaEditando.id;  
 
     if (!reservaId) {
-      alert("Consulta não encontrada.");
+      showError("Consulta não encontrada.");
       return;
     }
 
@@ -390,7 +411,7 @@ const handleSalvarEdicao = async () => {
     });
 
     if (response.status === 200) {
-      alert("Edição enviada! Aguardando confirmação do professor.");
+      success("Edição enviada! Aguardando confirmação do profissional.");
       sendEmailNotification(user.email, user.nome, solicitCount, faltasCount, edicoesCount);
 
       const updatedReserva = {
@@ -413,13 +434,13 @@ const handleSalvarEdicao = async () => {
     }
   } catch (error) {
     console.error("Erro ao editar consulta:", error);
-    alert("Erro ao editar consulta. Tente novamente.");
+    showError("Erro ao editar consulta. Tente novamente.");
   }
 };
 
 const adicionarDiaReserva = () => {
     if (!dataSelecionada || !horario) {
-      alert('Por favor, preencha todos os campos.');
+      warning('Por favor, preencha todos os campos.');
       return;
     }
     const dataFormatada = formatarDataBrasil(dataSelecionada);
@@ -441,12 +462,12 @@ const adicionarDiaReserva = () => {
   
   const enviarReservas = async () => {
     if (reservasTemporarias.length === 0) {
-      alert('Solicitação Enviada!');
+      success('Solicitação Enviada!');
       return;
     }
   
     if (!user) {
-      alert('Você precisa estar logado para fazer uma consulta.');
+      warning('Você precisa estar logado para fazer uma consulta.');
       return;
     }
   
@@ -474,7 +495,7 @@ const adicionarDiaReserva = () => {
       window.location.reload();
     } catch (error) {
       console.error('Erro ao enviar reservas:', error);
-      alert('Erro ao tentar enviar as consultas. Tente novamente.');
+      showError('Erro ao tentar enviar as consultas. Tente novamente.');
     }
   };
   
@@ -514,10 +535,56 @@ const adicionarDiaReserva = () => {
                 </DatePickerWrapper>
                 <label>Horário:</label>
                 <Input 
-                  type="time" 
-                  value={formatarHorarioBrasil(horario)} 
-                  onChange={handleHorarioChange}
-                  step="60"
+                  type="text" 
+                  placeholder="HH:MM (ex: 14:30)"
+                  value={horario ? (formatarHorarioBrasil(horario) || horario) : ''} 
+                  onChange={(e) => {
+                    let valor = e.target.value.replace(/\D/g, '');
+                    
+                    if (valor.length <= 2) {
+                      setHorario(valor);
+                    } else if (valor.length <= 4) {
+                      setHorario(valor.slice(0, 2) + ':' + valor.slice(2));
+                    } else {
+                      setHorario(valor.slice(0, 2) + ':' + valor.slice(2, 4));
+                    }
+                  }}
+                  onBlur={(e) => {
+                    let valor = e.target.value;
+                    if (valor.includes(' ')) {
+                      const partes = valor.split(' ');
+                      if (partes.length >= 2) {
+                        const horaMinuto = partes[0];
+                        const periodo = partes[1].toUpperCase();
+                        const [hora, minuto] = horaMinuto.split(':');
+                        let horas = parseInt(hora, 10);
+                        
+                        if (periodo === 'PM' && horas !== 12) {
+                          horas += 12;
+                        } else if (periodo === 'AM' && horas === 12) {
+                          horas = 0;
+                        }
+                        
+                        valor = `${String(horas).padStart(2, '0')}:${minuto || '00'}`;
+                      }
+                    }
+                    
+                    const horarioFormatado = formatarHorarioBrasil(valor);
+                    if (horarioFormatado && horarioFormatado.match(/^\d{2}:\d{2}$/)) {
+                      const [h, m] = horarioFormatado.split(':');
+                      if (parseInt(h) >= 0 && parseInt(h) <= 23 && parseInt(m) >= 0 && parseInt(m) <= 59) {
+                        setHorario(horarioFormatado);
+                        setHorarioFinal(calcularHorarioFinal(horarioFormatado));
+                      }
+                    } else if (valor.match(/^\d{2}:\d{2}$/)) {
+                      const [h, m] = valor.split(':');
+                      if (parseInt(h) >= 0 && parseInt(h) <= 23 && parseInt(m) >= 0 && parseInt(m) <= 59) {
+                        setHorario(valor);
+                        setHorarioFinal(calcularHorarioFinal(valor));
+                      }
+                    }
+                  }}
+                  maxLength={5}
                   required 
                 />
                 <Button_geral>
@@ -599,13 +666,17 @@ const adicionarDiaReserva = () => {
                 )}
                 <Button color="orange" onClick={() => handleEditar(reserva.id)}>Editar</Button>
   
-                {reservaEditando && reservaEditando.id === reserva.id && (
+                {reservaEditando && reservaEditando.id === reserva.id && novaData && (
                   <ContainerEdicao>
                     <Label>Data:</Label>
                     <DatePickerWrapper>
                       <DatePicker
                         selected={novaData}
-                        onChange={(date) => setNovaData(date)}
+                        onChange={(date) => {
+                          if (date) {
+                            setNovaData(date);
+                          }
+                        }}
                         minDate={new Date()}
                         dateFormat="dd/MM/yyyy"
                         locale={ptBR}
@@ -616,13 +687,26 @@ const adicionarDiaReserva = () => {
   
                     <Label>Horário:</Label>
                     <Input 
-                      type="time" 
-                      value={formatarHorarioBrasil(novoHorario)} 
+                      type="text" 
+                      placeholder="HH:MM (ex: 14:30)"
+                      value={novoHorario || ''} 
                       onChange={(e) => {
-                        let novoHorarioInput = e.target.value;
+                        let valor = e.target.value.replace(/\D/g, '');
                         
-                        if (novoHorarioInput && novoHorarioInput.includes(' ')) {
-                          const partes = novoHorarioInput.split(' ');
+                        if (valor.length <= 2) {
+                          setNovoHorario(valor);
+                        } else if (valor.length <= 4) {
+                          setNovoHorario(valor.slice(0, 2) + ':' + valor.slice(2));
+                        } else {
+                          setNovoHorario(valor.slice(0, 2) + ':' + valor.slice(2, 4));
+                        }
+                      }}
+                      onBlur={(e) => {
+                        let valor = e.target.value;
+                        if (!valor) return;
+                        
+                        if (valor.includes(' ')) {
+                          const partes = valor.split(' ');
                           if (partes.length >= 2) {
                             const horaMinuto = partes[0];
                             const periodo = partes[1].toUpperCase();
@@ -635,17 +719,34 @@ const adicionarDiaReserva = () => {
                               horas = 0;
                             }
                             
-                            novoHorarioInput = `${String(horas).padStart(2, '0')}:${minuto}`;
+                            valor = `${String(horas).padStart(2, '0')}:${minuto || '00'}`;
                           }
                         }
                         
-                        const horarioFormatado = formatarHorarioBrasil(novoHorarioInput);
-                        setNovoHorario(horarioFormatado);
+                        try {
+                          const horarioFormatado = formatarHorarioBrasil(valor);
+                          if (horarioFormatado && horarioFormatado.match(/^\d{2}:\d{2}$/)) {
+                            const [h, m] = horarioFormatado.split(':');
+                            if (parseInt(h) >= 0 && parseInt(h) <= 23 && parseInt(m) >= 0 && parseInt(m) <= 59) {
+                              setNovoHorario(horarioFormatado);
+                            }
+                          } else if (valor.match(/^\d{2}:\d{2}$/)) {
+                            const [h, m] = valor.split(':');
+                            if (parseInt(h) >= 0 && parseInt(h) <= 23 && parseInt(m) >= 0 && parseInt(m) <= 59) {
+                              setNovoHorario(valor);
+                            }
+                          }
+                        } catch (error) {
+                          console.error('Erro ao formatar horário:', error);
+                        }
                       }}
-                      step="60"
+                      maxLength={5}
                     />
   
                     <Button onClick={handleSalvarEdicao}>Confirmar Edição</Button>
+                    <Button onClick={() => setReservaEditando(null)} style={{ marginLeft: '10px', backgroundColor: 'gray', color: 'white' }}>
+                      Cancelar
+                    </Button>
                   </ContainerEdicao>
                 )}
               </ReservaItem>

@@ -1,6 +1,7 @@
 import { useState} from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { useNotification } from '../../contexts/NotificationContext';
 
 const PageWrapper = styled.div`
   display: flex;
@@ -47,13 +48,14 @@ const ResetPassword = () => {
   const [id, setId] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const navigate = useNavigate();
+  const { success, error: showError, warning } = useNotification();
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
   
     // Verifica se as senhas coincidem
     if (senha !== confirmarSenha) {
-      alert('As senhas não coincidem.');
+      warning('As senhas não coincidem.');
       return;
     }
   
@@ -66,10 +68,10 @@ const ResetPassword = () => {
     });
   
     if (response.ok) {
-      alert('Senha redefinida com sucesso.');
+      success('Senha redefinida com sucesso.');
       navigate('/entrar');
     } else {
-      alert('Erro ao redefinir senha.');
+      showError('Erro ao redefinir senha.');
     }
   };
   
