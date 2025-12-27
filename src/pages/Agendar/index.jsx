@@ -817,26 +817,6 @@ const adicionarDiaReserva = () => {
                   )}
 
                 </MensagemStatus>
-                {reserva.status === 'confirmado' && (
-                  <>
-                    <Button onClick={() => setTempoFalta({ ...tempoFalta, [reserva.id]: '' })}>
-                      Falta Programada
-                    </Button>
-                    {tempoFalta[reserva.id] !== undefined && (
-                      <div>
-                        <p style={{marginTop: '20px'}}>Tempo de Falta:</p>
-                        <input
-                          type="text"
-                          value={tempoFalta[reserva.id] || ""}
-                          onChange={(e) => setTempoFalta({ ...tempoFalta, [reserva.id]: e.target.value })}
-                        />
-                        <Button color="green" onClick={() => handleFaltar(reserva.id)}>
-                          Confirmar
-                        </Button>
-                      </div>
-                    )}
-                  </>
-                )}
                 <Button color="orange" onClick={() => handleEditar(reserva.id)}>Editar</Button>
   
                 {reservaEditando && reservaEditando.id === reserva.id && novaData && (

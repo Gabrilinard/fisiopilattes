@@ -1,7 +1,7 @@
 import axios from 'axios';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
 import { useNavigate } from 'react-router-dom';
 import Footer from '../../components/Footer';
@@ -41,6 +41,10 @@ const AdminDashboard = () => {
   const [editCidade, setEditCidade] = useState('');
   const [editUfRegiao, setEditUfRegiao] = useState('');
   const [editingUserId, setEditingUserId] = useState(null);
+  const [showInfoEdit, setShowInfoEdit] = useState(false);
+  const [editDescricao, setEditDescricao] = useState('');
+  const [editPublicoAtendido, setEditPublicoAtendido] = useState('');
+  const [editModalidade, setEditModalidade] = useState('');
 
   const formatarHorarioBrasil = (horario) => {
     if (!horario) return '';
@@ -145,6 +149,44 @@ const AdminDashboard = () => {
       buscarUsuarioPorId(userId);
     }
   }, [userId]);
+
+  // Refs para os drawers
+  const mapDrawerRef = useRef(null);
+  const infoDrawerRef = useRef(null);
+  const formDrawerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showMapEdit && mapDrawerRef.current && !mapDrawerRef.current.contains(event.target)) {
+        setShowMapEdit(false);
+        setEditingUserId(null);
+        setEditLatitude(null);
+        setEditLongitude(null);
+        setEditCidade('');
+        setEditUfRegiao('');
+      }
+      
+      if (showInfoEdit && infoDrawerRef.current && !infoDrawerRef.current.contains(event.target)) {
+        setShowInfoEdit(false);
+        setEditingUserId(null);
+        setEditDescricao('');
+        setEditPublicoAtendido('');
+        setEditModalidade('');
+      }
+      
+      if (showForm && formDrawerRef.current && !formDrawerRef.current.contains(event.target)) {
+        setShowForm(false);
+      }
+    };
+
+    if (showMapEdit || showInfoEdit || showForm) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMapEdit, showInfoEdit, showForm]);
 
   useEffect(() => {
     if (!user || !user.id) {
@@ -467,6 +509,31 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleEditarInformacoes = async () => {
+    if (!editingUserId) {
+      warning('Erro ao identificar usuário.');
+      return;
+    }
+
+    try {
+      await axios.patch(`http://localhost:3000/usuarios/${editingUserId}/informacoes`, {
+        descricao: editDescricao,
+        publicoAtendido: editPublicoAtendido,
+        modalidade: editModalidade
+      });
+
+      success('Informações atualizadas com sucesso!');
+      setShowInfoEdit(false);
+      setEditingUserId(null);
+      setEditDescricao('');
+      setEditPublicoAtendido('');
+      setEditModalidade('');
+    } catch (error) {
+      console.error('Erro ao atualizar informações:', error);
+      showError('Erro ao atualizar informações.');
+    }
+  };
+
   const LocationPickerEdit = ({ onLocationSelect, initialLat, initialLng }) => {
     const [position, setPosition] = useState(initialLat && initialLng ? [initialLat, initialLng] : [-14.235, -51.9253]);
 
@@ -594,6 +661,22 @@ const AdminDashboard = () => {
               }
             }}>
               Editar Mapa
+            </Button_2>
+            <Button_2 onClick={async () => {
+              try {
+                const response = await axios.get(`http://localhost:3000/usuarios/solicitarDados/${user.id}`);
+                const userData = response.data;
+                setShowInfoEdit(true);
+                setEditingUserId(user.id);
+                setEditDescricao(userData.descricao || '');
+                setEditPublicoAtendido(userData.publicoAtendido || '');
+                setEditModalidade(userData.modalidade || '');
+              } catch (error) {
+                console.error('Erro ao buscar dados do usuário:', error);
+                showError('Erro ao carregar informações.');
+              }
+            }}>
+              Editar Informações
             </Button_2>
           </div>
           <Button onClick={handleLogout} style={{ backgroundColor: 'red', color: 'white' }}>
@@ -803,7 +886,7 @@ const AdminDashboard = () => {
 
       </Container>
       
-      <DrawerContainer isOpen={showForm}>
+      <DrawerContainer isOpen={showForm} ref={formDrawerRef}>
         <DrawerHeader>
           <DrawerTitle>Criar Consulta</DrawerTitle>
         </DrawerHeader>
@@ -886,7 +969,7 @@ const AdminDashboard = () => {
         </FormContainer>
       </DrawerContainer>
 
-      <DrawerContainer isOpen={showMapEdit}>
+      <DrawerContainer isOpen={showMapEdit} ref={mapDrawerRef}>
         <DrawerHeader>
           <DrawerTitle>Editar Localização</DrawerTitle>
         </DrawerHeader>
@@ -934,6 +1017,79 @@ const AdminDashboard = () => {
               setEditLongitude(null);
               setEditCidade('');
               setEditUfRegiao('');
+            }} style={{ backgroundColor: 'gray', color: 'white' }}>
+              Cancelar
+            </Button>
+          </div>
+        </FormContainer>
+      </DrawerContainer>
+
+      <DrawerContainer isOpen={showInfoEdit} ref={infoDrawerRef}>
+        <DrawerHeader>
+          <DrawerTitle>Editar Informações</DrawerTitle>
+        </DrawerHeader>
+        
+        <FormContainer style={{ maxWidth: '100%', boxShadow: 'none', padding: 0 }}>
+          <Label>Descrição:</Label>
+          <textarea
+            value={editDescricao}
+            onChange={(e) => setEditDescricao(e.target.value)}
+            placeholder="Descreva sua experiência e especialidades..."
+            style={{
+              width: '100%',
+              padding: '10px',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              minHeight: '100px',
+              fontFamily: 'Figtree, sans-serif',
+              resize: 'vertical',
+              marginBottom: '15px',
+              boxSizing: 'border-box'
+            }}
+          />
+
+          <Label>Público Atendido:</Label>
+          <Select
+            value={editPublicoAtendido}
+            onChange={(e) => setEditPublicoAtendido(e.target.value)}
+            style={{ marginBottom: '15px' }}
+          >
+            <option value="">Selecione...</option>
+            <option value="Adultos">Adultos</option>
+            <option value="Crianças">Crianças</option>
+            <option value="Idosos">Idosos</option>
+            <option value="Adultos e Crianças">Adultos e Crianças</option>
+            <option value="Adultos e Idosos">Adultos e Idosos</option>
+            <option value="Crianças e Idosos">Crianças e Idosos</option>
+            <option value="Todos">Todos</option>
+          </Select>
+
+          <Label>Modalidade:</Label>
+          <Select
+            value={editModalidade}
+            onChange={(e) => setEditModalidade(e.target.value)}
+            style={{ marginBottom: '15px' }}
+          >
+            <option value="">Selecione...</option>
+            <option value="presencial">Presencial</option>
+            <option value="online">Online</option>
+            <option value="domiciliar">Domiciliar</option>
+            <option value="presencial,online">Presencial e Online</option>
+            <option value="presencial,domiciliar">Presencial e Domiciliar</option>
+            <option value="online,domiciliar">Online e Domiciliar</option>
+            <option value="presencial,online,domiciliar">Presencial, Online e Domiciliar</option>
+          </Select>
+
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <Button onClick={handleEditarInformacoes} style={{ backgroundColor: 'green', color: 'white' }}>
+              Salvar Informações
+            </Button>
+            <Button onClick={() => {
+              setShowInfoEdit(false);
+              setEditingUserId(null);
+              setEditDescricao('');
+              setEditPublicoAtendido('');
+              setEditModalidade('');
             }} style={{ backgroundColor: 'gray', color: 'white' }}>
               Cancelar
             </Button>

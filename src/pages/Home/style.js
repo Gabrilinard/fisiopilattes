@@ -54,6 +54,20 @@ export const Container_texto = styled.div`
   }
 `;
 
+export const ButtonsContainer = styled.div`
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  align-items: center;
+  margin: 20px auto;
+  flex-wrap: wrap;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    width: 100%;
+  }
+`;
+
 export const AgendarButton = styled.button`
   background-color: green;
   color: white;
@@ -63,11 +77,36 @@ export const AgendarButton = styled.button`
   border-radius: 5px;
   cursor: pointer;
   text-align: center;
-  margin: 20px auto;
-  display: block;
+  font-family: 'Figtree', sans-serif;
   
   &:hover {
     background-color: darkgreen;
+  }
+  
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 300px;
+  }
+`;
+
+export const MinhasConsultasButton = styled.button`
+  background-color: #007bff;
+  color: white;
+  padding: 10px 20px;
+  font-size: 1.2rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: center;
+  font-family: 'Figtree', sans-serif;
+  
+  &:hover {
+    background-color: #0056b3;
+  }
+  
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 300px;
   }
 `;
 
