@@ -91,7 +91,7 @@ export const SectionTitle = styled.h2`
   font-size: 2.5rem;
   font-weight: bold;
   color: black;
-  font-family: 'Sansita', sans-serif;
+  font-family: 'Figtree', sans-serif;
 
   @media (max-width: 768px) {
     font-size: 2.1rem;
@@ -122,11 +122,36 @@ export const OverlayText = styled.div`
   font-size: 3.5rem;
   font-weight: bold;
   text-align: center;
-  font-family: 'Sansita', sans-serif;
-  margin-top: 20px; // Ajuste de espaçamento
+  font-family: 'Figtree', sans-serif;
+  margin: 0;
+  display: inline-block;
 
   @media (max-width: 768px) {
     font-size: 2.6rem;
+  }
+`;
+
+export const WelcomeContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    gap: 10px;
+  }
+`;
+
+export const WelcomeLogo = styled.img`
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+
+  @media (max-width: 768px) {
+    width: 60px;
+    height: 60px;
   }
 `;
 
@@ -135,7 +160,7 @@ export const Footer = styled.footer`
   color: white;
   text-align: center;
   padding: 20px 0;
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: 'Figtree', sans-serif;
   margin-top: 40px;  // Ajuste do espaçamento para o footer
 
   @media (max-width: 768px) {
@@ -158,7 +183,7 @@ export const EmpresasTitle = styled.h2`
   font-size: 2.5rem;
   font-weight: bold;
   color: black;
-  font-family: 'Sansita', sans-serif;
+  font-family: 'Figtree', sans-serif;
   margin-bottom: 30px;
 
   @media (max-width: 768px) {
@@ -202,7 +227,7 @@ export const EmpresaNome = styled.h3`
   font-weight: bold;
   color: #333;
   margin-bottom: 10px;
-  font-family: 'Sansita', sans-serif;
+  font-family: 'Figtree', sans-serif;
 
   @media (max-width: 768px) {
     font-size: 1.3rem;

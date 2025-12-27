@@ -1,56 +1,46 @@
 import React from 'react';
+import { FaWhatsapp } from 'react-icons/fa';
 import {
-  InstagramLink,
   FooterContainer,
+  FooterContent,
   LeftSection,
-  PrimaryInfo,
-  RightSection,
-  ContactInfo,
-  LocationInfo,
-  Desenvolvido,
   LogoImage,
+  BrandName,
+  Description,
+  WhatsAppCircle,
+  WhatsAppLink,
+  WhatsAppIcon,
+  ContactLabel,
 } from './style';
-import fisiologo from '../../assets/fisiologo.jpg';
-import { FaInstagram } from 'react-icons/fa'; // usa o ícone do pacote
+import pngLogoAgende from '../../assets/pnglogoagende.png';
 
 const Footer = () => {
+  const whatsappNumber = '86994273418';
+  const whatsappLink = `https://wa.me/${whatsappNumber}`;
+
   return (
     <FooterContainer>
-      <LeftSection>
-        <PrimaryInfo>
-          <LogoImage src={fisiologo} alt="Logo Fisiopilates" />
-          <p className="Slogan">Seu Treino é nossa obrigação!</p>
-        </PrimaryInfo>
-      </LeftSection>
-
-      <RightSection>
-        <LocationInfo>
-          <h2 className="SectionTitle">Localização</h2>
-          <p className="Text">Av. Pedro Almeida, 413</p>
-          <p className="Text">Teresina, PI</p>
-        </LocationInfo>
-
-        <ContactInfo>
-          <h2 className="SectionTitle">Contato</h2>
-          <p className="Text">
-          <InstagramLink
-            href="https://www.instagram.com/fisio.pilattes/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <FaInstagram size={20} />
-            @fisio.pilattes
-          </InstagramLink>
-          </p>
-          <p className="Text">(98) 98202-1516</p>
-        </ContactInfo>
-
-        <Desenvolvido>
-          <h2 className="Text">Desenvolvido por: Gabriel Linard</h2>
-          <p className="Text">@gabrilinard</p>
-          <p className="Text">gabrielleite729@gmail.com</p>
-        </Desenvolvido>
-      </RightSection>
+      <FooterContent>
+        <LeftSection>
+          <LogoImage src={pngLogoAgende} alt="Logo Agende Aqui" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+            <BrandName>Agende Aqui</BrandName>
+            <Description>
+              Conectando profissionais de saúde e pacientes de forma simples e eficiente. 
+              Nossa plataforma oferece uma experiência completa para agendamento de consultas, 
+              facilitando o acesso aos cuidados de saúde que você precisa, quando você precisa.
+            </Description>
+          </div>
+        </LeftSection>
+        <WhatsAppCircle>
+          <ContactLabel>Contato:</ContactLabel>
+          <WhatsAppLink href={whatsappLink} target="_blank" rel="noopener noreferrer">
+            <WhatsAppIcon>
+              <FaWhatsapp />
+            </WhatsAppIcon>
+          </WhatsAppLink>
+        </WhatsAppCircle>
+      </FooterContent>
     </FooterContainer>
   );
 };

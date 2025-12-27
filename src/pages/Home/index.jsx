@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom';
+import pngLogoAgende from '../../assets/pnglogoagende.png';
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
 import { useAuth } from '../../contexts/AuthContext';
-import { AgendarButton, Container, Container_texto, OverlayText, WelcomeText } from './style';
+import { AgendarButton, Container, Container_texto, OverlayText, WelcomeContainer, WelcomeLogo, WelcomeText } from './style';
 
 const Home = () => {
     const navigate = useNavigate();
@@ -20,7 +21,11 @@ const Home = () => {
         <Container>
             <Header />
             <Container_texto>
-                <OverlayText>Bem-Vindo!!</OverlayText>
+                <WelcomeContainer>
+                    <OverlayText>Bem-Vindo ao</OverlayText>
+                    <WelcomeLogo src={pngLogoAgende} alt="Logo Agende Aqui" />
+                    <OverlayText>!</OverlayText>
+                </WelcomeContainer>
                 <WelcomeText>
                     Bem-vindo à nossa plataforma de saúde! Agende sua consulta de forma simples e rápida.
                 </WelcomeText>

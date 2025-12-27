@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button, Container, Dropdown, Nav, Navbar } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
@@ -23,7 +23,7 @@ const StyledNavLeft = styled(Nav)`
   .nav-link {
     color: green !important;
     font-size: 1.1rem;
-    font-family: 'Merriweather', serif;
+    font-family: 'Figtree', sans-serif;
   }
 
   .nav-link:hover {
@@ -44,7 +44,7 @@ const StyledNavRight = styled(Nav)`
   .nav-link {
     color: rgb(30, 30, 30) !important;
     font-size: 1.1rem;
-    font-family: 'Merriweather', serif;
+    font-family: 'Figtree', sans-serif;
   }
 
   .nav-link:hover {
@@ -63,7 +63,7 @@ const StyledBrand = styled(Navbar.Brand)`
   text-align: center;
   flex-grow: 0;
   margin-left: auto;
-  font-family: 'Young Serif', serif;
+  font-family: 'Figtree', sans-serif;
   margin-right: auto;
 `;
 
@@ -82,7 +82,7 @@ const StyledButton = styled(Button)`
 const StyledDropdownToggle = styled(Dropdown.Toggle)`
   color: rgb(57, 57, 57) !important;
   font-size: 1.1rem;
-  font-family: 'Merriweather', serif;
+  font-family: 'Figtree', sans-serif;
   text-decoration: none;
 
   &:hover {

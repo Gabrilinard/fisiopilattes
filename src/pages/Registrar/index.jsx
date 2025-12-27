@@ -30,8 +30,9 @@ const Content = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 20px;
+  padding-top: 40px;
 `;
 
 const Form = styled.form`
@@ -516,8 +517,8 @@ const Registro = () => {
     <Container>
       <Header />
       <Content>
-        <h2>Registrar-se</h2>
         <Form onSubmit={handleRegister}>
+          <h2>Registrar-se</h2>
           <div>
             <label style={{ display: 'block', marginBottom: '8px', textAlign: 'left' }}>Tipo de Usuário:</label>
             <RadioGroup>
@@ -555,6 +556,34 @@ const Registro = () => {
             required
             />
           <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+
+          <InputWrapper>
+            <Input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Senha"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              required
+            />
+            <EyeIcon onClick={togglePasswordVisibility}>
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </EyeIcon>
+          </InputWrapper>
+
+          <InputWrapper>
+            <Input
+              type={showConfirmPassword ? 'text' : 'password'}
+              placeholder="Confirmar Senha"
+              value={confirmarSenha}
+              onChange={handleConfirmPasswordChange}
+              required
+            />
+            <EyeIcon onClick={toggleConfirmPasswordVisibility}>
+              {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+            </EyeIcon>
+          </InputWrapper>
+
+          {!passwordsMatch && <p style={{ color: 'red' }}>As senhas não coincidem.</p>}
 
           {tipoUsuario === 'profissional' && (
             <>
@@ -634,12 +663,16 @@ const Registro = () => {
                 required
               />
 
-              <label>Selecione sua localização no mapa:</label>
-              <Button type="button" onClick={() => setShowMap(!showMap)} style={{ marginBottom: '10px' }}>
-                {showMap ? 'Ocultar Mapa' : 'Mostrar Mapa'}
-              </Button>
+              {numeroConselho && numeroConselho.trim() && (
+                <>
+                  <label>Local do seu atendimento</label>
+                  <Button type="button" onClick={() => setShowMap(!showMap)} style={{ marginBottom: '10px' }}>
+                    {showMap ? 'Ocultar Mapa' : 'Mostrar Mapa'}
+                  </Button>
+                </>
+              )}
               
-              {showMap && (
+              {showMap && numeroConselho && numeroConselho.trim() && (
                 <MapWrapper>
                   <LocationPicker onLocationSelect={handleMapClick} />
                 </MapWrapper>
@@ -668,34 +701,6 @@ const Registro = () => {
               )}
             </>
           )}
-          
-          <InputWrapper>
-            <Input
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Senha"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              required
-            />
-            <EyeIcon onClick={togglePasswordVisibility}>
-              {showPassword ? <FaEyeSlash /> : <FaEye />}
-            </EyeIcon>
-          </InputWrapper>
-
-          <InputWrapper>
-            <Input
-              type={showConfirmPassword ? 'text' : 'password'}
-              placeholder="Confirmar Senha"
-              value={confirmarSenha}
-              onChange={handleConfirmPasswordChange}
-              required
-            />
-            <EyeIcon onClick={toggleConfirmPasswordVisibility}>
-              {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-            </EyeIcon>
-          </InputWrapper>
-
-          {!passwordsMatch && <p style={{ color: 'red' }}>As senhas não coincidem.</p>}
 
           <Button type="submit">Criar Conta</Button>
           <LoginButton onClick={() => navigate('/Entrar')}>Já tem uma conta? Faça o Login</LoginButton>

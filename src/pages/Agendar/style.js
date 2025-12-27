@@ -258,7 +258,7 @@ export const TituloAgendamento = styled.h2`
   color: #333;
   margin-bottom: 20px;
   text-align: center;
-  font-family: 'Sansita', sans-serif;
+  font-family: 'Figtree', sans-serif;
 
   @media (max-width: 768px) {
     font-size: 1.5rem;
