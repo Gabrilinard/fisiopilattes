@@ -32,6 +32,7 @@ const EmpresasProfissionais = () => {
             for (const categoria of categorias) {
                 try {
                     const response = await axios.get(`http://localhost:3000/profissionais/${categoria}`);
+                    console.log(`Dados recebidos para ${categoria}:`, response.data);
                     profissionais[categoria] = response.data;
                     exibidos[categoria] = 10;
                 } catch (error) {
@@ -105,28 +106,36 @@ const EmpresasProfissionais = () => {
                 {profissionaisFiltrados.length > 0 ? (
                     <>
                         <EmpresasGrid>
-                            {profissionaisParaExibir.map((profissional, index) => (
-                                <EmpresaCard key={index}>
-                                    <EmpresaNome>{profissional.nomeCompleto}</EmpresaNome>
-                                    <EmpresaInfo>
-                                        <div style={{ marginBottom: '8px', fontWeight: '500' }}>
-                                            {profissional.tipoProfissional}
-                                        </div>
-                                        {profissional.ufRegiao ? (
-                                            <div style={{ color: '#666', fontSize: '14px', fontWeight: '500' }}>
-                                                UF: {profissional.ufRegiao}
-                                            </div>
-                                        ) : (
-                                            <div style={{ color: '#999', fontSize: '12px', fontStyle: 'italic' }}>
-                                                UF não informada
-                                            </div>
-                                        )}
-                                    </EmpresaInfo>
-                                    <InscreverButton onClick={() => handleInscrever(profissional.nomeCompleto, 'profissional')}>
-                                        Agende Agora
-                                    </InscreverButton>
-                                </EmpresaCard>
-                            ))}
+                            {profissionaisParaExibir.map((profissional, index) => {
+                                const temCidade = profissional.cidade && profissional.cidade.trim() !== '';
+                                const temUF = profissional.ufRegiao && profissional.ufRegiao.trim() !== '';
+                                
+                                return (
+                                    <EmpresaCard key={index}>
+                                        <EmpresaNome>{profissional.nomeCompleto}</EmpresaNome>
+                                        <EmpresaInfo>
+                                            {temCidade || temUF ? (
+                                                <div style={{ color: '#666', fontSize: '14px', marginTop: '8px' }}>
+                                                    {temCidade && temUF ? (
+                                                        `${profissional.cidade}, ${profissional.ufRegiao}`
+                                                    ) : temCidade ? (
+                                                        profissional.cidade
+                                                    ) : (
+                                                        profissional.ufRegiao
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div style={{ color: '#999', fontSize: '12px', fontStyle: 'italic', marginTop: '8px' }}>
+                                                    Localização não informada
+                                                </div>
+                                            )}
+                                        </EmpresaInfo>
+                                        <InscreverButton onClick={() => handleInscrever(profissional.nomeCompleto, 'profissional')}>
+                                            Agende Agora
+                                        </InscreverButton>
+                                    </EmpresaCard>
+                                );
+                            })}
                         </EmpresasGrid>
                         {temMaisProfissionais && (
                             <VerMaisButton onClick={handleVerMais}>

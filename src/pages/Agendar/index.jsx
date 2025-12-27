@@ -1,15 +1,25 @@
 import axios from 'axios';
 import { ptBR } from 'date-fns/locale';
 import emailjs from 'emailjs-com';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { useEffect, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { MapContainer, Marker, TileLayer } from 'react-leaflet';
 import { useLocation } from 'react-router-dom';
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
-import { Button, Button_geral, Container, Container_Important, ContainerEdicao, ContainerGeral, DatePickerWrapper, Div, Div_2, FormularioReserva, H3, Input, Label, Linha, Lista, MensagemStatus, Paragrafo, Reserva_2, ReservaItem, ReservasContainer, Selecao, TituloAgendamento } from './style';
+import { Button, Button_geral, Container, Container_Important, ContainerEdicao, ContainerGeral, DataHorarioMapaContainer, DataHorarioWrapper, DatePickerWrapper, Div, Div_2, FormularioReserva, H3, Input, Label, Linha, Lista, MapaContainer, MapWrapper, MensagemStatus, Paragrafo, Reserva_2, ReservaItem, ReservasContainer, Selecao, TituloAgendamento } from './style';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 const Agendar = () => {
   const { user } = useAuth();
@@ -30,6 +40,8 @@ const Agendar = () => {
   const [reservaEditando, setReservaEditando] = useState(null);
   const [novaData, setNovaData] = useState(new Date());
   const [novoHorario, setNovoHorario] = useState('');
+  const [profissionalLocation, setProfissionalLocation] = useState(null);
+  const [enderecoCompleto, setEnderecoCompleto] = useState('');
 
   const formatarDataBrasil = (data) => {
     if (!data) return '';
@@ -127,6 +139,53 @@ const Agendar = () => {
           );
           
           if (profissional && profissional.id) {
+            axios.get(`http://localhost:3000/usuarios/solicitarDados/${profissional.id}`)
+              .then(profResponse => {
+                const profData = profResponse.data;
+                console.log('Dados do profissional recebidos:', profData);
+                if (profData.latitude && profData.longitude) {
+                  const lat = parseFloat(profData.latitude);
+                  const lng = parseFloat(profData.longitude);
+                  
+                  console.log('Localização encontrada:', { lat, lng });
+                  
+                  setProfissionalLocation({
+                    lat: lat,
+                    lng: lng,
+                    cidade: profData.cidade,
+                    ufRegiao: profData.ufRegiao
+                  });
+
+                  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=pt-BR`)
+                    .then(response => response.json())
+                    .then(data => {
+                      console.log('Dados do endereço recebidos:', data);
+                      if (data && data.address) {
+                        const endereco = [];
+                        if (data.address.road) endereco.push(data.address.road);
+                        if (data.address.house_number) endereco.push(data.address.house_number);
+                        if (data.address.neighbourhood) endereco.push(data.address.neighbourhood);
+                        if (data.address.city || data.address.town || data.address.village) {
+                          endereco.push(data.address.city || data.address.town || data.address.village);
+                        }
+                        if (data.address.state) endereco.push(data.address.state);
+                        if (data.address.postcode) endereco.push(`CEP: ${data.address.postcode}`);
+                        
+                        setEnderecoCompleto(endereco.length > 0 ? endereco.join(', ') : data.display_name || '');
+                      } else {
+                        setEnderecoCompleto('');
+                      }
+                    })
+                    .catch(error => {
+                      console.error('Erro ao buscar endereço:', error);
+                      setEnderecoCompleto('');
+                    });
+                } else {
+                  console.log('Profissional não tem localização cadastrada');
+                }
+              })
+              .catch(error => console.error('Erro ao buscar localização do profissional:', error));
+
             axios.get(`http://localhost:3000/reservas?usuario_id=${user.id}&profissional_id=${profissional.id}`)
               .then(response => {
                 const reservasFormatadas = response.data.map(reserva => ({
@@ -521,72 +580,121 @@ const adicionarDiaReserva = () => {
           {!mensagemLogin && (
             <>
               <FormularioReserva onSubmit={handleReserva}>
-                <label>Data:</label>
-                <DatePickerWrapper>
-                  <DatePicker
-                    selected={dataSelecionada}
-                    onChange={(date) => setDataSelecionada(date)}
-                    minDate={new Date()}
-                    dateFormat="dd/MM/yyyy"
-                    locale={ptBR}
-                    showPopperArrow={false}
-                    required
-                  />
-                </DatePickerWrapper>
-                <label>Horário:</label>
-                <Input 
-                  type="text" 
-                  placeholder="HH:MM (ex: 14:30)"
-                  value={horario ? (formatarHorarioBrasil(horario) || horario) : ''} 
-                  onChange={(e) => {
-                    let valor = e.target.value.replace(/\D/g, '');
-                    
-                    if (valor.length <= 2) {
-                      setHorario(valor);
-                    } else if (valor.length <= 4) {
-                      setHorario(valor.slice(0, 2) + ':' + valor.slice(2));
-                    } else {
-                      setHorario(valor.slice(0, 2) + ':' + valor.slice(2, 4));
-                    }
-                  }}
-                  onBlur={(e) => {
-                    let valor = e.target.value;
-                    if (valor.includes(' ')) {
-                      const partes = valor.split(' ');
-                      if (partes.length >= 2) {
-                        const horaMinuto = partes[0];
-                        const periodo = partes[1].toUpperCase();
-                        const [hora, minuto] = horaMinuto.split(':');
-                        let horas = parseInt(hora, 10);
+                <DataHorarioMapaContainer>
+                  <DataHorarioWrapper>
+                    <label>Data:</label>
+                    <DatePickerWrapper>
+                      <DatePicker
+                        selected={dataSelecionada}
+                        onChange={(date) => setDataSelecionada(date)}
+                        minDate={new Date()}
+                        dateFormat="dd/MM/yyyy"
+                        locale={ptBR}
+                        showPopperArrow={false}
+                        required
+                      />
+                    </DatePickerWrapper>
+                    <label>Horário:</label>
+                    <Input 
+                      type="text" 
+                      placeholder="HH:MM (ex: 14:30)"
+                      value={horario ? (formatarHorarioBrasil(horario) || horario) : ''} 
+                      onChange={(e) => {
+                        let valor = e.target.value.replace(/\D/g, '');
                         
-                        if (periodo === 'PM' && horas !== 12) {
-                          horas += 12;
-                        } else if (periodo === 'AM' && horas === 12) {
-                          horas = 0;
+                        if (valor.length <= 2) {
+                          setHorario(valor);
+                        } else if (valor.length <= 4) {
+                          setHorario(valor.slice(0, 2) + ':' + valor.slice(2));
+                        } else {
+                          setHorario(valor.slice(0, 2) + ':' + valor.slice(2, 4));
+                        }
+                      }}
+                      onBlur={(e) => {
+                        let valor = e.target.value;
+                        if (valor.includes(' ')) {
+                          const partes = valor.split(' ');
+                          if (partes.length >= 2) {
+                            const horaMinuto = partes[0];
+                            const periodo = partes[1].toUpperCase();
+                            const [hora, minuto] = horaMinuto.split(':');
+                            let horas = parseInt(hora, 10);
+                            
+                            if (periodo === 'PM' && horas !== 12) {
+                              horas += 12;
+                            } else if (periodo === 'AM' && horas === 12) {
+                              horas = 0;
+                            }
+                            
+                            valor = `${String(horas).padStart(2, '0')}:${minuto || '00'}`;
+                          }
                         }
                         
-                        valor = `${String(horas).padStart(2, '0')}:${minuto || '00'}`;
-                      }
-                    }
-                    
-                    const horarioFormatado = formatarHorarioBrasil(valor);
-                    if (horarioFormatado && horarioFormatado.match(/^\d{2}:\d{2}$/)) {
-                      const [h, m] = horarioFormatado.split(':');
-                      if (parseInt(h) >= 0 && parseInt(h) <= 23 && parseInt(m) >= 0 && parseInt(m) <= 59) {
-                        setHorario(horarioFormatado);
-                        setHorarioFinal(calcularHorarioFinal(horarioFormatado));
-                      }
-                    } else if (valor.match(/^\d{2}:\d{2}$/)) {
-                      const [h, m] = valor.split(':');
-                      if (parseInt(h) >= 0 && parseInt(h) <= 23 && parseInt(m) >= 0 && parseInt(m) <= 59) {
-                        setHorario(valor);
-                        setHorarioFinal(calcularHorarioFinal(valor));
-                      }
-                    }
-                  }}
-                  maxLength={5}
-                  required 
-                />
+                        const horarioFormatado = formatarHorarioBrasil(valor);
+                        if (horarioFormatado && horarioFormatado.match(/^\d{2}:\d{2}$/)) {
+                          const [h, m] = horarioFormatado.split(':');
+                          if (parseInt(h) >= 0 && parseInt(h) <= 23 && parseInt(m) >= 0 && parseInt(m) <= 59) {
+                            setHorario(horarioFormatado);
+                            setHorarioFinal(calcularHorarioFinal(horarioFormatado));
+                          }
+                        } else if (valor.match(/^\d{2}:\d{2}$/)) {
+                          const [h, m] = valor.split(':');
+                          if (parseInt(h) >= 0 && parseInt(h) <= 23 && parseInt(m) >= 0 && parseInt(m) <= 59) {
+                            setHorario(valor);
+                            setHorarioFinal(calcularHorarioFinal(valor));
+                          }
+                        }
+                      }}
+                      maxLength={5}
+                      required 
+                    />
+                  </DataHorarioWrapper>
+                  {profissionalLocation && !isNaN(profissionalLocation.lat) && !isNaN(profissionalLocation.lng) ? (
+                    <MapaContainer>
+                      <MapWrapper>
+                        <MapContainer
+                          key={`map-${profissionalLocation.lat}-${profissionalLocation.lng}`}
+                          center={[profissionalLocation.lat, profissionalLocation.lng]}
+                          zoom={13}
+                          style={{ height: '300px', width: '100%' }}
+                        >
+                          <TileLayer
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                          />
+                          <Marker position={[profissionalLocation.lat, profissionalLocation.lng]} />
+                        </MapContainer>
+                      </MapWrapper>
+                      {enderecoCompleto && (
+                        <div style={{ 
+                          padding: '10px', 
+                          backgroundColor: '#f8f9fa', 
+                          borderRadius: '5px', 
+                          fontSize: '14px',
+                          color: '#333',
+                          textAlign: 'center'
+                        }}>
+                          <strong>📍 Endereço:</strong> {enderecoCompleto}
+                        </div>
+                      )}
+                    </MapaContainer>
+                  ) : (
+                    nome && (
+                      <div style={{ 
+                        padding: '20px', 
+                        backgroundColor: '#f8f9fa', 
+                        borderRadius: '5px', 
+                        fontSize: '14px',
+                        color: '#666',
+                        textAlign: 'center',
+                        flex: 1,
+                        minWidth: '300px'
+                      }}>
+                        Localização não disponível para este profissional.
+                      </div>
+                    )
+                  )}
+                </DataHorarioMapaContainer>
                 <Button_geral>
                   <Button onClick={enviarReservas}>Solicitar Consulta</Button>
                   <Button onClick={adicionarDiaReserva} style={{backgroundColor: 'green'}}>Adicionar Dia</Button>

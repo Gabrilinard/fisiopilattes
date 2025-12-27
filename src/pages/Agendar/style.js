@@ -25,8 +25,27 @@ export const FormularioReserva = styled.form`
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  max-width: 400px;
+  max-width: 800px;
   width: 100%;
+`;
+
+export const DataHorarioMapaContainer = styled.div`
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  align-items: flex-start;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+`;
+
+export const DataHorarioWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  flex: 1;
+  min-width: 200px;
 `;
 
 export const Input = styled.input`
@@ -229,13 +248,51 @@ export const Button_geral = styled.div`
 export const Container_Important = styled.div`
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   margin: auto;
-  gap: 10px;
+  gap: 20px;
+  max-width: 1200px;
+  width: 100%;
 
   @media (max-width: 768px) {
-    display: inline;
+    flex-direction: column;
+    align-items: center;
   }
+`;
+
+export const MapWrapper = styled.div`
+  width: 100%;
+  max-width: 400px;
+  height: 300px;
+  min-height: 300px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background: white;
+  flex: 1;
+  min-width: 300px;
+  position: relative;
+  z-index: 0;
+
+  .leaflet-container {
+    height: 100% !important;
+    width: 100% !important;
+    min-height: 300px;
+  }
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+    min-width: 100%;
+    margin-top: 0;
+  }
+`;
+
+export const MapaContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-width: 300px;
 `;
 
 export const ContainerEdicao = styled.div`

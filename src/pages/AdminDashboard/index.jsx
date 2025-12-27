@@ -152,11 +152,6 @@ const AdminDashboard = () => {
       return;
     }
     
-    console.log('AdminDashboard: user completo:', user);
-    console.log('AdminDashboard: user.tipoUsuario:', user.tipoUsuario);
-    console.log('AdminDashboard: user.id:', user.id);
-    console.log('AdminDashboard: user.tipoUsuario === "profissional":', user.tipoUsuario === 'profissional');
-    
     const isProfissional = user.tipoUsuario === 'profissional';
     const url = isProfissional
       ? `http://localhost:3000/reservas?profissional_id=${user.id}`
@@ -172,7 +167,6 @@ const AdminDashboard = () => {
     axios.get(url)
       .then(response => {
         const reservasData = response.data;
-        console.log('Reservas recebidas:', reservasData);
     
         setReservas(reservasData);
     
