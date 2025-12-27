@@ -20,7 +20,7 @@ const Home = () => {
         <Container>
             <Header />
             <Container_texto>
-                <OverlayText>Bem-Vindo!</OverlayText>
+                <OverlayText>Bem-Vindo!!</OverlayText>
                 <WelcomeText>
                     Bem-vindo à nossa plataforma de saúde! Agende sua consulta de forma simples e rápida.
                 </WelcomeText>
