@@ -232,3 +232,25 @@ export const CloseButton = styled.button`
     color: #333;
   }
 `;
+
+export const DatePickerWrapper = styled.div`
+  width: 100%;
+  margin-bottom: 12px;
+  
+  .react-datepicker-wrapper {
+    width: 100%;
+  }
+  
+  .react-datepicker__input-container {
+    width: 100%;
+    
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 16px;
+      font-family: 'Figtree', sans-serif;
+    }
+  }
+`;

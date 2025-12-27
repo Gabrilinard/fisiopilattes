@@ -55,24 +55,49 @@ const MinhasConsultas = () => {
   const buscarConsultas = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:3000/reservas?usuario_id=${user.id}`);
+      
+      // Se for profissional, busca por profissional_id, senão busca por usuario_id
+      const isProfissional = user.tipoUsuario === 'profissional';
+      const url = isProfissional 
+        ? `http://localhost:3000/reservas?profissional_id=${user.id}`
+        : `http://localhost:3000/reservas?usuario_id=${user.id}`;
+      
+      const response = await axios.get(url);
       const consultasData = response.data || [];
       
       const consultasComNomes = await Promise.all(
         consultasData.map(async (consulta) => {
-          if (consulta.profissional_id) {
-            try {
-              const profResponse = await axios.get(`http://localhost:3000/usuarios/solicitarDados/${consulta.profissional_id}`);
-              return {
-                ...consulta,
-                nomeProfissional: `${profResponse.data.nome} ${profResponse.data.sobrenome}`
-              };
-            } catch (error) {
-              console.error('Erro ao buscar nome do profissional:', error);
-              return { ...consulta, nomeProfissional: 'Profissional não encontrado' };
+          let nomeOutroUsuario = '';
+          
+          if (isProfissional) {
+            // Se for profissional, busca o nome do paciente
+            if (consulta.usuario_id) {
+              try {
+                const pacienteResponse = await axios.get(`http://localhost:3000/usuarios/solicitarDados/${consulta.usuario_id}`);
+                nomeOutroUsuario = `${pacienteResponse.data.nome} ${pacienteResponse.data.sobrenome}`;
+              } catch (error) {
+                console.error('Erro ao buscar nome do paciente:', error);
+                nomeOutroUsuario = 'Paciente não encontrado';
+              }
+            }
+          } else {
+            // Se for paciente, busca o nome do profissional
+            if (consulta.profissional_id) {
+              try {
+                const profResponse = await axios.get(`http://localhost:3000/usuarios/solicitarDados/${consulta.profissional_id}`);
+                nomeOutroUsuario = `${profResponse.data.nome} ${profResponse.data.sobrenome}`;
+              } catch (error) {
+                console.error('Erro ao buscar nome do profissional:', error);
+                nomeOutroUsuario = 'Profissional não encontrado';
+              }
             }
           }
-          return consulta;
+          
+          return {
+            ...consulta,
+            nomeProfissional: isProfissional ? undefined : nomeOutroUsuario,
+            nomePaciente: isProfissional ? nomeOutroUsuario : undefined
+          };
         })
       );
       
@@ -285,7 +310,13 @@ const MinhasConsultas = () => {
               </ConsultaHeader>
               
               <ConsultaInfo>
-                {consulta.nomeProfissional && (
+                {user.tipoUsuario === 'profissional' && consulta.nomePaciente && (
+                  <ConsultaInfoRow>
+                    <ConsultaLabel>Paciente:</ConsultaLabel>
+                    <ConsultaValue>{consulta.nomePaciente}</ConsultaValue>
+                  </ConsultaInfoRow>
+                )}
+                {user.tipoUsuario === 'paciente' && consulta.nomeProfissional && (
                   <ConsultaInfoRow>
                     <ConsultaLabel>Profissional:</ConsultaLabel>
                     <ConsultaValue>{consulta.nomeProfissional}</ConsultaValue>

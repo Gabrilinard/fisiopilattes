@@ -1,13 +1,16 @@
 import axios from 'axios';
+import { ptBR } from 'date-fns/locale';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useRef, useState } from 'react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
 import { useNavigate } from 'react-router-dom';
 import Footer from '../../components/Footer';
 import { useAuth } from "../../contexts/AuthContext";
 import { useNotification } from '../../contexts/NotificationContext';
-import { Button, Button_2, Container, DaysWrapper, DivInputContainer, DrawerContainer, DrawerHeader, DrawerTitle, FormContainer, Input, Label, Select, Table, TableWrapper, Td, Th, Wrapper } from './style';
+import { Button, Button_2, Container, DatePickerWrapper, DaysWrapper, DivInputContainer, DrawerContainer, DrawerHeader, DrawerTitle, FormContainer, Input, Label, Select, Table, TableWrapper, Td, Th, Wrapper } from './style';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -20,12 +23,12 @@ const AdminDashboard = () => {
   const [nomeReserva, setNomeReserva] = useState('');
   const [sobrenomeReserva, setSobrenomeReserva] = useState('');
   const [emailReserva, setEmailReserva] = useState('');
-  const [diaReserva, setDiaReserva] = useState('');
+  const [dataReserva, setDataReserva] = useState(new Date());
   const [telefoneReserva, setTelefoneReserva] = useState('');
   const [horarioReserva, setHorarioReserva] = useState('');
-  const [qntdPessoas, setQntdPessoas] = useState('');
   const [reservas, setReservas] = useState([]);
-  const [userId, setUserId] = useState([]);
+  const [userId, setUserId] = useState(null);
+  const [cpfUsuario, setCpfUsuario] = useState('');
   const [motivo, setMotivo] = useState('');
   const [mostrarMotivo, setMostrarMotivo] = useState(null);
   const { logout, user } = useAuth();
@@ -130,25 +133,49 @@ const AdminDashboard = () => {
     }
   };
 
-  const buscarUsuarioPorId = async (id) => {
+  const buscarUsuarioPorCPF = async (cpf) => {
     try {
-      const response = await axios.get(`http://localhost:3000/usuarios/solicitarDados/${id}`);
+      const cpfLimpo = cpf.replace(/\D/g, '');
+      if (cpfLimpo.length !== 11) {
+        if (cpfLimpo.length > 0) {
+          warning('CPF deve conter 11 dígitos.');
+        }
+        return;
+      }
+      
+      const response = await axios.get(`http://localhost:3000/usuarios/buscarPorCPF/${cpfLimpo}`);
       const usuario = response.data;
       setNomeReserva(usuario.nome);
       setSobrenomeReserva(usuario.sobrenome);
       setEmailReserva(usuario.email);
       setTelefoneReserva(usuario.telefone);
+      setUserId(usuario.id);
     } catch (error) {
-      console.log('Erro ao buscar usuário por ID:', error);
+      console.log('Erro ao buscar usuário por CPF:', error);
+      if (error.response?.status === 404) {
+        showError('Usuário não encontrado com este CPF.');
+      } else {
+        showError('Erro ao buscar usuário por CPF.');
+      }
+      setNomeReserva('');
+      setSobrenomeReserva('');
+      setEmailReserva('');
+      setTelefoneReserva('');
+      setUserId(null);
     }
-};
-
+  };
 
   useEffect(() => {
-    if (userId) {
-      buscarUsuarioPorId(userId);
+    if (cpfUsuario && cpfUsuario.replace(/\D/g, '').length === 11) {
+      buscarUsuarioPorCPF(cpfUsuario);
+    } else if (cpfUsuario === '') {
+      setNomeReserva('');
+      setSobrenomeReserva('');
+      setEmailReserva('');
+      setTelefoneReserva('');
+      setUserId(null);
     }
-  }, [userId]);
+  }, [cpfUsuario]);
 
   const mapDrawerRef = useRef(null);
   const infoDrawerRef = useRef(null);
@@ -187,7 +214,7 @@ const AdminDashboard = () => {
     };
   }, [showMapEdit, showInfoEdit, showForm]);
 
-  useEffect(() => {
+  const buscarReservas = async () => {
     if (!user || !user.id) {
       console.log('AdminDashboard: user não disponível ainda', { user });
       return;
@@ -205,64 +232,68 @@ const AdminDashboard = () => {
       url 
     });
     
-    axios.get(url)
-      .then(response => {
-        const reservasData = response.data;
-    
-        setReservas(reservasData);
-    
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-    
-        const reservasPorDataObj = reservasData.reduce((acc, reserva) => {
-          if (!reserva.dia) return acc;
-          
-          let dataReserva;
-          if (typeof reserva.dia === 'string') {
-            let dataParaFormatar = reserva.dia;
-            if (reserva.dia.includes('T')) {
-              dataParaFormatar = reserva.dia.split('T')[0];
-            }
-            const partes = dataParaFormatar.split('-');
-            if (partes.length === 3) {
-              const [ano, mes, dia] = partes;
-              dataReserva = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
-            } else {
-              dataReserva = new Date(dataParaFormatar);
-            }
-          } else {
-            dataReserva = new Date(reserva.dia);
-          }
-          
-          dataReserva.setHours(0, 0, 0, 0);
-          
-          if (dataReserva >= hoje) {
-            const ano = dataReserva.getFullYear();
-            const mes = String(dataReserva.getMonth() + 1).padStart(2, '0');
-            const dia = String(dataReserva.getDate()).padStart(2, '0');
-            const dataKey = `${ano}-${mes}-${dia}`;
-            if (!acc[dataKey]) {
-              acc[dataKey] = [];
-            }
-            acc[dataKey].push(reserva);
-          }
-    
-          return acc;
-        }, {});
-    
-        Object.keys(reservasPorDataObj).forEach(dataKey => {
-          reservasPorDataObj[dataKey].sort((a, b) => {
-            const horarioA = a.horario || '00:00';
-            const horarioB = b.horario || '00:00';
-            return horarioA.localeCompare(horarioB);
-          });
-        });
-    
-        setReservasPorData(reservasPorDataObj);
-        setShowConsultas(true);
+    try {
+      const response = await axios.get(url);
+      const reservasData = response.data;
+  
+      setReservas(reservasData);
+  
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+  
+      const reservasPorDataObj = reservasData.reduce((acc, reserva) => {
+        if (!reserva.dia) return acc;
         
-      })
-      .catch(error => console.error('Erro ao buscar consultas:', error));
+        let dataReserva;
+        if (typeof reserva.dia === 'string') {
+          let dataParaFormatar = reserva.dia;
+          if (reserva.dia.includes('T')) {
+            dataParaFormatar = reserva.dia.split('T')[0];
+          }
+          const partes = dataParaFormatar.split('-');
+          if (partes.length === 3) {
+            const [ano, mes, dia] = partes;
+            dataReserva = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+          } else {
+            dataReserva = new Date(dataParaFormatar);
+          }
+        } else {
+          dataReserva = new Date(reserva.dia);
+        }
+        
+        dataReserva.setHours(0, 0, 0, 0);
+        
+        if (dataReserva >= hoje) {
+          const ano = dataReserva.getFullYear();
+          const mes = String(dataReserva.getMonth() + 1).padStart(2, '0');
+          const dia = String(dataReserva.getDate()).padStart(2, '0');
+          const dataKey = `${ano}-${mes}-${dia}`;
+          if (!acc[dataKey]) {
+            acc[dataKey] = [];
+          }
+          acc[dataKey].push(reserva);
+        }
+
+        return acc;
+      }, {});
+
+      Object.keys(reservasPorDataObj).forEach(dataKey => {
+        reservasPorDataObj[dataKey].sort((a, b) => {
+          const horarioA = a.horario || '00:00';
+          const horarioB = b.horario || '00:00';
+          return horarioA.localeCompare(horarioB);
+        });
+      });
+
+      setReservasPorData(reservasPorDataObj);
+      setShowConsultas(true);
+    } catch (error) {
+      console.error('Erro ao buscar consultas:', error);
+    }
+  };
+
+  useEffect(() => {
+    buscarReservas();
   }, [user]);
 
   const atualizarStatus = (id, status) => {
@@ -570,22 +601,44 @@ const AdminDashboard = () => {
   };
 
   const handleCreateReserva = async () => {
+    if (!userId) {
+      warning('Por favor, busque um usuário pelo CPF primeiro.');
+      return;
+    }
+
+    if (!dataReserva) {
+      warning('Por favor, selecione uma data.');
+      return;
+    }
+
+    if (!horarioReserva) {
+      warning('Por favor, selecione um horário.');
+      return;
+    }
+
     try {
       const horarioInicial = new Date(`1970-01-01T${horarioReserva}:00`);
-      const horarioFinal = new Date(horarioInicial.getTime() + 60 * 60 * 1000); // Adicionando 1 hora
+      const horarioFinal = new Date(horarioInicial.getTime() + 60 * 60 * 1000); 
       const horarioFinalFormatado = `${horarioFinal.getHours().toString().padStart(2, '0')}:${horarioFinal.getMinutes().toString().padStart(2, '0')}`;
+
+      // Formatar data no formato YYYY-MM-DD (mesmo formato usado na página Agendar)
+      const ano = dataReserva.getFullYear();
+      const mes = String(dataReserva.getMonth() + 1).padStart(2, '0');
+      const dia = String(dataReserva.getDate()).padStart(2, '0');
+      const dataFormatada = `${ano}-${mes}-${dia}`;
 
       await axios.post('http://localhost:3000/reservas', {
         nome: nomeReserva,
         sobrenome: sobrenomeReserva,
         email: emailReserva,
-        dia: diaReserva,
+        dia: dataFormatada,
         horario: horarioReserva,
         horarioFinal: horarioFinalFormatado,
-        qntd_pessoa: qntdPessoas,
-        telefone: telefoneReserva, //
+        qntd_pessoa: 1,
+        telefone: telefoneReserva,
         usuario_id: userId,
-        status: 'pendente',
+        profissional_id: user.id,
+        status: 'confirmado', // Consultas criadas pelo profissional já vêm confirmadas
       });
 
       success('Consulta criada com sucesso!');
@@ -593,10 +646,12 @@ const AdminDashboard = () => {
       setSobrenomeReserva('');
       setEmailReserva('');
       setTelefoneReserva('');
-      setDiaReserva('');
+      setDataReserva(new Date());
       setHorarioReserva('');
-      setQntdPessoas('');
-      window.location.reload();
+      setCpfUsuario('');
+      setUserId(null);
+      setShowForm(false);
+      buscarReservas(); // Atualiza a lista de reservas após criar
     } catch (error) {
       console.error('Erro ao criar consulta:', error);
       showError('Erro ao criar consulta.');
@@ -891,11 +946,22 @@ const AdminDashboard = () => {
         </DrawerHeader>
         
         <FormContainer style={{ maxWidth: '100%', boxShadow: 'none', padding: 0 }}>
+          <Label>CPF do Usuário:</Label>
           <Input
-            type="number"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-            placeholder="ID do Usuário"
+            type="text"
+            value={cpfUsuario}
+            onChange={(e) => {
+              let valor = e.target.value.replace(/\D/g, '');
+              if (valor.length <= 11) {
+                let formatado = valor;
+                if (valor.length > 3) formatado = valor.slice(0, 3) + '.' + valor.slice(3);
+                if (valor.length > 6) formatado = valor.slice(0, 3) + '.' + valor.slice(3, 6) + '.' + valor.slice(6);
+                if (valor.length > 9) formatado = valor.slice(0, 3) + '.' + valor.slice(3, 6) + '.' + valor.slice(6, 9) + '-' + valor.slice(9);
+                setCpfUsuario(formatado);
+              }
+            }}
+            placeholder="000.000.000-00"
+            maxLength={14}
           />
 
           {userId && (
@@ -935,31 +1001,72 @@ const AdminDashboard = () => {
             </DivInputContainer>
           )}
 
-          <Select
-            value={diaReserva}
-            onChange={(e) => setDiaReserva(e.target.value)}
-          >
-            <option value="">Selecione o dia</option>
-            <option value="Segunda">Segunda</option>
-            <option value="Terça">Terça</option>
-            <option value="Quarta">Quarta</option>
-            <option value="Quinta">Quinta</option>
-            <option value="Sexta">Sexta</option>
-            <option value="Sábado">Sábado</option>
-            <option value="Domingo">Domingo</option>
-          </Select>
+          <Label>Data da Consulta:</Label>
+          <DatePickerWrapper>
+            <DatePicker
+              selected={dataReserva}
+              onChange={(date) => setDataReserva(date)}
+              minDate={new Date()}
+              dateFormat="dd/MM/yyyy"
+              locale={ptBR}
+              showPopperArrow={false}
+              required
+            />
+          </DatePickerWrapper>
 
+          <Label>Horário (HH:mm):</Label>
           <Input
-            type="time"
-            value={horarioReserva}
-            onChange={(e) => setHorarioReserva(e.target.value)}
-          />
-
-          <Input
-            type="number"
-            value={qntdPessoas}
-            onChange={(e) => setQntdPessoas(e.target.value)}
-            placeholder="Quantidade de Pessoas"
+            type="text"
+            placeholder="HH:MM (ex: 14:30)"
+            value={horarioReserva ? (formatarHorarioBrasil(horarioReserva) || horarioReserva) : ''}
+            onChange={(e) => {
+              let valor = e.target.value.replace(/\D/g, '');
+              
+              if (valor.length <= 2) {
+                setHorarioReserva(valor);
+              } else if (valor.length <= 4) {
+                setHorarioReserva(valor.slice(0, 2) + ':' + valor.slice(2));
+              } else {
+                setHorarioReserva(valor.slice(0, 2) + ':' + valor.slice(2, 4));
+              }
+            }}
+            onBlur={(e) => {
+              let valor = e.target.value;
+              if (!valor) return;
+              
+              if (valor.includes(' ')) {
+                const partes = valor.split(' ');
+                if (partes.length >= 2) {
+                  const horaMinuto = partes[0];
+                  const periodo = partes[1].toUpperCase();
+                  const [hora, minuto] = horaMinuto.split(':');
+                  let horas = parseInt(hora, 10);
+                  
+                  if (periodo === 'PM' && horas !== 12) {
+                    horas += 12;
+                  } else if (periodo === 'AM' && horas === 12) {
+                    horas = 0;
+                  }
+                  
+                  valor = `${String(horas).padStart(2, '0')}:${minuto || '00'}`;
+                }
+              }
+              
+              const horarioFormatado = formatarHorarioBrasil(valor);
+              if (horarioFormatado && horarioFormatado.match(/^\d{2}:\d{2}$/)) {
+                const [h, m] = horarioFormatado.split(':');
+                if (parseInt(h) >= 0 && parseInt(h) <= 23 && parseInt(m) >= 0 && parseInt(m) <= 59) {
+                  setHorarioReserva(horarioFormatado);
+                }
+              } else if (valor.match(/^\d{2}:\d{2}$/)) {
+                const [h, m] = valor.split(':');
+                if (parseInt(h) >= 0 && parseInt(h) <= 23 && parseInt(m) >= 0 && parseInt(m) <= 59) {
+                  setHorarioReserva(valor);
+                }
+              }
+            }}
+            maxLength={5}
+            required
           />
 
           <Button onClick={handleCreateReserva} style={{ width: '100%', marginTop: '10px' }}>

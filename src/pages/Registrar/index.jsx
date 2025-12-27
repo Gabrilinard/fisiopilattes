@@ -190,6 +190,7 @@ const Registro = () => {
   const [descricao, setDescricao] = useState('');
   const [publicoAtendido, setPublicoAtendido] = useState('');
   const [modalidade, setModalidade] = useState('');
+  const [cpf, setCpf] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
   const { success, error: showError } = useNotification();
@@ -326,6 +327,55 @@ const Registro = () => {
     }
   };
 
+  const formatarCPF = (valor) => {
+    const apenasNumeros = valor.replace(/\D/g, '');
+    if (apenasNumeros.length <= 3) return apenasNumeros;
+    if (apenasNumeros.length <= 6) return `${apenasNumeros.slice(0, 3)}.${apenasNumeros.slice(3)}`;
+    if (apenasNumeros.length <= 9) return `${apenasNumeros.slice(0, 3)}.${apenasNumeros.slice(3, 6)}.${apenasNumeros.slice(6)}`;
+    return `${apenasNumeros.slice(0, 3)}.${apenasNumeros.slice(3, 6)}.${apenasNumeros.slice(6, 9)}-${apenasNumeros.slice(9, 11)}`;
+  };
+
+  const validarCPF = (cpf) => {
+    if (!cpf) return false;
+    
+    const apenasNumeros = cpf.replace(/\D/g, '');
+    
+    // Verifica se tem 11 dígitos
+    if (apenasNumeros.length !== 11) return false;
+    
+    // Verifica se todos os dígitos são iguais (CPF inválido)
+    if (/^(\d)\1{10}$/.test(apenasNumeros)) return false;
+    
+    // Validação dos dígitos verificadores
+    let soma = 0;
+    let resto;
+    
+    // Valida primeiro dígito
+    for (let i = 1; i <= 9; i++) {
+      soma += parseInt(apenasNumeros.substring(i - 1, i)) * (11 - i);
+    }
+    resto = (soma * 10) % 11;
+    if (resto === 10 || resto === 11) resto = 0;
+    if (resto !== parseInt(apenasNumeros.substring(9, 10))) return false;
+    
+    // Valida segundo dígito
+    soma = 0;
+    for (let i = 1; i <= 10; i++) {
+      soma += parseInt(apenasNumeros.substring(i - 1, i)) * (12 - i);
+    }
+    resto = (soma * 10) % 11;
+    if (resto === 10 || resto === 11) resto = 0;
+    if (resto !== parseInt(apenasNumeros.substring(10, 11))) return false;
+    
+    return true;
+  };
+
+  const handleCPFChange = (e) => {
+    const valor = e.target.value;
+    const formatado = formatarCPF(valor);
+    setCpf(formatado);
+  };
+
   const handleNumeroConselhoChange = (e) => {
     const valor = e.target.value;
     const formatado = formatarNumeroConselho(valor, tipoProfissional);
@@ -379,6 +429,16 @@ const Registro = () => {
   
     if (senha !== confirmarSenha) {
       showError('As senhas não coincidem!');
+      return;
+    }
+
+    if (!cpf || !cpf.trim()) {
+      showError('Por favor, informe o CPF.');
+      return;
+    }
+
+    if (!validarCPF(cpf)) {
+      showError('CPF inválido. Por favor, verifique o CPF informado.');
       return;
     }
 
@@ -458,6 +518,7 @@ const Registro = () => {
         telefone,
         email,
         senha,
+        cpf: cpf.replace(/\D/g, ''),
         tipoUsuario: tipoUsuarioFinal,
         ...(tipoUsuarioFinal === 'profissional' && {
           tipoProfissional: tipoProfissional === 'outros' ? profissaoCustomizada : tipoProfissional,
@@ -558,6 +619,15 @@ const Registro = () => {
 
           <Input type="text" placeholder="Nome" value={nome} onChange={(e) => setNome(e.target.value)} required />
           <Input type="text" placeholder="Sobrenome" value={sobrenome} onChange={(e) => setSobrenome(e.target.value)} required />
+          <label style={{ display: 'block', marginBottom: '8px', textAlign: 'left', fontWeight: 'bold' }}>CPF:</label>
+          <Input 
+            type="text" 
+            placeholder="000.000.000-00" 
+            value={cpf} 
+            onChange={handleCPFChange}
+            maxLength={14}
+            required 
+          />
           <Input
             type="text"
             placeholder="Telefone"
