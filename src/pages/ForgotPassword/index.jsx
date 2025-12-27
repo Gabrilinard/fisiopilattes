@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import emailjs from 'emailjs-com';
+import { useNotification } from '../../contexts/NotificationContext';
 
 const PageWrapper = styled.div`
   display: flex;
@@ -45,7 +46,8 @@ const Button = styled.button`
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
-  const navigate = useNavigate(); // Hook para navegação
+  const navigate = useNavigate();
+  const { success, error: showError, warning } = useNotification();
 
   const sendPasswordResetEmail = (userEmail, userId) => {
     console.log(userEmail, userId);
@@ -64,14 +66,14 @@ const ForgotPassword = () => {
       .send('service_5guvy7s', 'template_6rjaiue', templateParams, '95NytkXcfDF9Z3EEQ')
       .then((response) => {
         console.log('E-mail de redefinição de senha enviado com sucesso:', response.status, response.text);
-        alert('E-mail de redefinição de senha enviado! Verifique sua caixa de entrada.');
+        success('E-mail de redefinição de senha enviado! Verifique sua caixa de entrada.');
 
         // Redirecionar após o envio do e-mail
         navigate('/ResetPassword');  // Redireciona para a página /ResetPassword
       })
       .catch((error) => {
         console.error('Erro ao enviar e-mail de redefinição de senha:', error);
-        alert('Erro ao enviar o e-mail. Tente novamente mais tarde.');
+        showError('Erro ao enviar o e-mail. Tente novamente mais tarde.');
       });
   };
 
@@ -79,7 +81,7 @@ const ForgotPassword = () => {
     e.preventDefault();
 
     if (!email) {
-      alert('Por favor, insira seu e-mail.');
+      warning('Por favor, insira seu e-mail.');
       return;
     }
     console.log("E-mail digitado:", email);
@@ -98,7 +100,7 @@ const ForgotPassword = () => {
       // Enviar o e-mail com o link de redefinição
       sendPasswordResetEmail(email, userId);
     } else {
-      alert('Usuário não encontrado.');
+      showError('Usuário não encontrado.');
     }
   };
 

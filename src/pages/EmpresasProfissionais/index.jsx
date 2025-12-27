@@ -4,11 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import { Container, EmpresaCard, EmpresaInfo, EmpresaNome, EmpresasGrid, EmpresasSection, InscreverButton, SearchContainer, SearchInput, TabButton, TabContainer, VerMaisButton, WelcomeText } from '../Home/style';
 
 const EmpresasProfissionais = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { warning } = useNotification();
     const categorias = ['medico', 'dentista', 'nutricionista', 'fisioterapeuta', 'fonoaudiologo'];
     const categoriasLabels = {
         'medico': 'Médicos',
@@ -55,7 +57,7 @@ const EmpresasProfissionais = () => {
 
     const handleInscrever = (nome, tipo) => {
         if (!user) {
-            alert('Você precisa estar logado para agendar.');
+            warning('Você precisa estar logado para agendar.');
             navigate('/Entrar');
             return;
         }

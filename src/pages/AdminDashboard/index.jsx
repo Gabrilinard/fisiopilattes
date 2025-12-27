@@ -1,9 +1,20 @@
 import axios from 'axios';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { useEffect, useState } from 'react';
+import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
 import { useNavigate } from 'react-router-dom';
 import Footer from '../../components/Footer';
 import { useAuth } from "../../contexts/AuthContext";
+import { useNotification } from '../../contexts/NotificationContext';
 import { Button, Button_2, Container, DaysWrapper, DivInputContainer, DrawerContainer, DrawerHeader, DrawerTitle, FormContainer, Input, Label, Select, Table, TableWrapper, Td, Th, Wrapper } from './style';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 const AdminDashboard = () => {
   const [nomeReserva, setNomeReserva] = useState('');
@@ -18,11 +29,55 @@ const AdminDashboard = () => {
   const [motivo, setMotivo] = useState('');
   const [mostrarMotivo, setMostrarMotivo] = useState(null);
   const { logout, user } = useAuth();
+  const { success, error: showError, warning } = useNotification();
   const [showReservas, setShowReservas] = useState(false);
   const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
   const [reservasPorData, setReservasPorData] = useState({});
   const [showConsultas, setShowConsultas] = useState(true);
+  const [showMapEdit, setShowMapEdit] = useState(false);
+  const [editLatitude, setEditLatitude] = useState(null);
+  const [editLongitude, setEditLongitude] = useState(null);
+  const [editCidade, setEditCidade] = useState('');
+  const [editUfRegiao, setEditUfRegiao] = useState('');
+  const [editingUserId, setEditingUserId] = useState(null);
+
+  const formatarHorarioBrasil = (horario) => {
+    if (!horario) return '';
+    
+    if (typeof horario !== 'string') {
+      horario = String(horario);
+    }
+    
+    const matchAMPM = horario.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)/i);
+    if (matchAMPM) {
+      let horas = parseInt(matchAMPM[1], 10);
+      const minutos = matchAMPM[2];
+      const periodo = matchAMPM[4].toUpperCase();
+      if (periodo === 'PM' && horas !== 12) {
+        horas += 12;
+      } else if (periodo === 'AM' && horas === 12) {
+        horas = 0;
+      }
+      return `${String(horas).padStart(2, '0')}:${minutos}`;
+    }
+    
+    const matchComSegundos = horario.match(/^(\d{1,2}):(\d{2}):(\d{2})/);
+    if (matchComSegundos) {
+      const horas = matchComSegundos[1];
+      const minutos = matchComSegundos[2];
+      return `${String(parseInt(horas, 10)).padStart(2, '0')}:${minutos}`;
+    }
+    
+    const matchHHMM = horario.match(/^(\d{1,2}):(\d{2})/);
+    if (matchHHMM) {
+      const horas = String(parseInt(matchHHMM[1], 10)).padStart(2, '0');
+      const minutos = matchHHMM[2];
+      return `${horas}:${minutos}`;
+    }
+    
+    return horario;
+  };
 
   const formatarDataExibicao = (dataString) => {
     if (!dataString) return '';
@@ -92,13 +147,27 @@ const AdminDashboard = () => {
   }, [userId]);
 
   useEffect(() => {
-    if (!user || !user.id) return;
+    if (!user || !user.id) {
+      console.log('AdminDashboard: user não disponível ainda', { user });
+      return;
+    }
     
-    const url = user.tipoUsuario === 'profissional' 
+    console.log('AdminDashboard: user completo:', user);
+    console.log('AdminDashboard: user.tipoUsuario:', user.tipoUsuario);
+    console.log('AdminDashboard: user.id:', user.id);
+    console.log('AdminDashboard: user.tipoUsuario === "profissional":', user.tipoUsuario === 'profissional');
+    
+    const isProfissional = user.tipoUsuario === 'profissional';
+    const url = isProfissional
       ? `http://localhost:3000/reservas?profissional_id=${user.id}`
       : 'http://localhost:3000/reservas';
     
-    console.log('Buscando reservas para:', { userId: user.id, tipoUsuario: user.tipoUsuario, url });
+    console.log('Buscando reservas para:', { 
+      userId: user.id, 
+      tipoUsuario: user.tipoUsuario, 
+      isProfissional,
+      url 
+    });
     
     axios.get(url)
       .then(response => {
@@ -159,7 +228,7 @@ const AdminDashboard = () => {
         
       })
       .catch(error => console.error('Erro ao buscar consultas:', error));
-  }, []);
+  }, [user]);
 
   const atualizarStatus = (id, status) => {
     axios.patch(`http://localhost:3000/reservas/${id}`, { status })
@@ -263,7 +332,7 @@ const AdminDashboard = () => {
         .then(() => {
           const updatedReservas = reservas.filter(reserva => reserva.id !== id);
           setReservas(updatedReservas);
-          alert('Consulta removida com sucesso!');
+          success('Consulta removida com sucesso!');
         })
         .catch(error => console.error('Erro ao remover consulta:', error));
     }
@@ -271,7 +340,7 @@ const AdminDashboard = () => {
 
   const negarReserva = (reserva) => {
     if (motivo.trim() === '') {
-      alert('Por favor, insira o motivo da negação!');
+      warning('Por favor, insira o motivo da negação!');
       return;
     }
 
@@ -283,7 +352,7 @@ const AdminDashboard = () => {
       setReservas(prevReservas => prevReservas.map(r =>
         r.id === reserva.id ? { ...r, status: 'negado', motivoNegacao: motivo } : r
       ));
-      alert('Consulta negada com sucesso!');
+      success('Consulta negada com sucesso!');
       setMotivo(''); 
       setMostrarMotivo(null);
     })
@@ -293,6 +362,151 @@ const AdminDashboard = () => {
   const handleLogout = () => {
     logout();
     navigate('/Entrar');
+  };
+
+  const converterEstadoParaSigla = (estadoNome) => {
+    const estadosMap = {
+      'acre': 'AC',
+      'alagoas': 'AL',
+      'amapá': 'AP',
+      'amazonas': 'AM',
+      'bahia': 'BA',
+      'ceará': 'CE',
+      'distrito federal': 'DF',
+      'espírito santo': 'ES',
+      'goiás': 'GO',
+      'maranhão': 'MA',
+      'mato grosso': 'MT',
+      'mato grosso do sul': 'MS',
+      'minas gerais': 'MG',
+      'pará': 'PA',
+      'paraíba': 'PB',
+      'paraná': 'PR',
+      'pernambuco': 'PE',
+      'piauí': 'PI',
+      'rio de janeiro': 'RJ',
+      'rio grande do norte': 'RN',
+      'rio grande do sul': 'RS',
+      'rondônia': 'RO',
+      'roraima': 'RR',
+      'santa catarina': 'SC',
+      'são paulo': 'SP',
+      'sergipe': 'SE',
+      'tocantins': 'TO'
+    };
+
+    if (!estadoNome) return null;
+
+    const estadoNormalizado = estadoNome.toLowerCase().trim();
+    
+    if (estadosMap[estadoNormalizado]) {
+      return estadosMap[estadoNormalizado];
+    }
+
+    if (estadoNome.length === 2 && /^[A-Z]{2}$/i.test(estadoNome)) {
+      return estadoNome.toUpperCase();
+    }
+
+    return null;
+  };
+
+  const buscarLocalizacao = async (lat, lng) => {
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=pt-BR`);
+      const data = await response.json();
+      
+      if (data && data.address) {
+        let uf = data.address.state_code || data.address.state;
+        const cidadeNome = data.address.city || data.address.town || data.address.village || data.address.municipality || data.address.county || '';
+        
+        if (uf) {
+          let ufLimpo = uf.replace(/^[A-Z]{2}-/, '').toUpperCase();
+          
+          if (ufLimpo.length > 2) {
+            const sigla = converterEstadoParaSigla(ufLimpo);
+            if (sigla) {
+              ufLimpo = sigla;
+            }
+          }
+          
+          setEditUfRegiao(ufLimpo);
+        }
+        if (cidadeNome) {
+          setEditCidade(cidadeNome);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao buscar localização:', error);
+    }
+  };
+
+  const handleMapClick = (lat, lng) => {
+    setEditLatitude(lat);
+    setEditLongitude(lng);
+    buscarLocalizacao(lat, lng);
+  };
+
+  const handleEditarMapa = async () => {
+    if (!editingUserId || !editLatitude || !editLongitude) {
+      warning('Por favor, selecione uma localização no mapa.');
+      return;
+    }
+
+    try {
+      await axios.patch(`http://localhost:3000/usuarios/${editingUserId}/localizacao`, {
+        latitude: editLatitude,
+        longitude: editLongitude,
+        cidade: editCidade,
+        ufRegiao: editUfRegiao
+      });
+
+      success('Localização atualizada com sucesso!');
+      setShowMapEdit(false);
+      setEditingUserId(null);
+      setEditLatitude(null);
+      setEditLongitude(null);
+      setEditCidade('');
+      setEditUfRegiao('');
+    } catch (error) {
+      console.error('Erro ao atualizar localização:', error);
+      showError('Erro ao atualizar localização.');
+    }
+  };
+
+  const LocationPickerEdit = ({ onLocationSelect, initialLat, initialLng }) => {
+    const [position, setPosition] = useState(initialLat && initialLng ? [initialLat, initialLng] : [-14.235, -51.9253]);
+
+    useEffect(() => {
+      if (initialLat && initialLng) {
+        setPosition([initialLat, initialLng]);
+      }
+    }, [initialLat, initialLng]);
+
+    function LocationMarker() {
+      useMapEvents({
+        click(e) {
+          const { lat, lng } = e.latlng;
+          setPosition([lat, lng]);
+          onLocationSelect(lat, lng);
+        },
+      });
+
+      return position === null ? null : <Marker position={position} />;
+    }
+
+    return (
+      <MapContainer
+        center={position}
+        zoom={6}
+        style={{ height: '100%', width: '100%' }}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <LocationMarker />
+      </MapContainer>
+    );
   };
 
   const handleCreateReserva = async () => {
@@ -314,7 +528,7 @@ const AdminDashboard = () => {
         status: 'pendente',
       });
 
-      alert('Consulta criada com sucesso!');
+      success('Consulta criada com sucesso!');
       setNomeReserva('');
       setSobrenomeReserva('');
       setEmailReserva('');
@@ -325,7 +539,7 @@ const AdminDashboard = () => {
       window.location.reload();
     } catch (error) {
       console.error('Erro ao criar consulta:', error);
-      alert('Erro ao criar consulta.');
+      showError('Erro ao criar consulta.');
     }
   };
   return (
@@ -364,6 +578,29 @@ const AdminDashboard = () => {
             }}>
               Ver Solicitações
             </Button_2>
+            <Button_2 onClick={async () => {
+              try {
+                const response = await axios.get(`http://localhost:3000/usuarios/solicitarDados/${user.id}`);
+                const userData = response.data;
+                setShowMapEdit(true);
+                setEditingUserId(user.id);
+                if (userData.latitude && userData.longitude) {
+                  setEditLatitude(parseFloat(userData.latitude));
+                  setEditLongitude(parseFloat(userData.longitude));
+                  if (userData.cidade) setEditCidade(userData.cidade);
+                  if (userData.ufRegiao) setEditUfRegiao(userData.ufRegiao);
+                } else {
+                  setEditLatitude(null);
+                  setEditLongitude(null);
+                }
+              } catch (error) {
+                console.error('Erro ao buscar dados do usuário:', error);
+                setShowMapEdit(true);
+                setEditingUserId(user.id);
+              }
+            }}>
+              Editar Mapa
+            </Button_2>
           </div>
           <Button onClick={handleLogout} style={{ backgroundColor: 'red', color: 'white' }}>
             Sair
@@ -394,7 +631,7 @@ const AdminDashboard = () => {
                   <Td>{reserva.email}</Td>
                   <Td>{reserva.telefone}</Td>
                   <Td>{formatarDataExibicao(reserva.dia)}</Td>
-                  <Td>{reserva.horario}</Td>
+                  <Td>{formatarHorarioBrasil(reserva.horario)}</Td>
                   <Td>{reserva.status}</Td>
                   <Td>{reserva.motivoFalta}</Td>
                   <Td>
@@ -559,7 +796,7 @@ const AdminDashboard = () => {
                           borderRadius: '4px',
                           borderLeft: '3px solid #4caf50'
                         }}>
-                          <strong>{reserva.horario}</strong> - {reserva.nome} {reserva.sobrenome}
+                          <strong>{formatarHorarioBrasil(reserva.horario)}</strong> - {reserva.nome} {reserva.sobrenome}
                         </div>
                       ))}
                     </div>
@@ -652,6 +889,61 @@ const AdminDashboard = () => {
           <Button onClick={handleCreateReserva} style={{ width: '100%', marginTop: '10px' }}>
             Criar Consulta
           </Button>
+        </FormContainer>
+      </DrawerContainer>
+
+      <DrawerContainer isOpen={showMapEdit}>
+        <DrawerHeader>
+          <DrawerTitle>Editar Localização</DrawerTitle>
+        </DrawerHeader>
+        
+        <FormContainer style={{ maxWidth: '100%', boxShadow: 'none', padding: 0 }}>
+          <Label>Clique no mapa para selecionar sua localização:</Label>
+          <div style={{ width: '100%', height: '400px', marginBottom: '15px', border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
+            <LocationPickerEdit 
+              onLocationSelect={handleMapClick}
+              initialLat={editLatitude}
+              initialLng={editLongitude}
+            />
+          </div>
+
+          {editLatitude && editLongitude && (
+            <>
+              <Input
+                type="text"
+                value={editUfRegiao}
+                placeholder="UF/Região (preenchido automaticamente)"
+                readOnly
+                style={{ backgroundColor: '#f0f0f0', marginBottom: '10px' }}
+              />
+              <Input
+                type="text"
+                value={editCidade}
+                placeholder="Cidade (preenchida automaticamente)"
+                readOnly
+                style={{ backgroundColor: '#f0f0f0', marginBottom: '10px' }}
+              />
+              <p style={{ fontSize: '12px', color: '#666', marginBottom: '15px' }}>
+                Localização selecionada: {editLatitude.toFixed(6)}, {editLongitude.toFixed(6)}
+              </p>
+            </>
+          )}
+
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <Button onClick={handleEditarMapa} style={{ backgroundColor: 'green', color: 'white' }}>
+              Salvar Localização
+            </Button>
+            <Button onClick={() => {
+              setShowMapEdit(false);
+              setEditingUserId(null);
+              setEditLatitude(null);
+              setEditLongitude(null);
+              setEditCidade('');
+              setEditUfRegiao('');
+            }} style={{ backgroundColor: 'gray', color: 'white' }}>
+              Cancelar
+            </Button>
+          </div>
         </FormContainer>
       </DrawerContainer>
 
