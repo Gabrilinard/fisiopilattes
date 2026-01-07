@@ -46,6 +46,8 @@ export const DataHorarioWrapper = styled.div`
   gap: 15px;
   flex: 1;
   min-width: 200px;
+  position: relative;
+  z-index: 1000;
 `;
 
 export const Input = styled.input`
@@ -339,6 +341,10 @@ export const DatePickerWrapper = styled.div`
       border-radius: 5px;
       font-size: 1rem;
     }
+  }
+
+  .react-datepicker-popper {
+    z-index: 9999 !important;
   }
 `;
 

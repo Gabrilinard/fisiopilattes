@@ -587,13 +587,41 @@ const handleSalvarEdicao = async () => {
   }
 };
 
-const adicionarDiaReserva = () => {
+const adicionarDiaReserva = (e) => {
+    if (e) e.preventDefault();
+
     if (!dataSelecionada || !horario) {
       warning('Por favor, preencha todos os campos.');
       return;
     }
     const dataFormatada = formatarDataBrasil(dataSelecionada);
     
+    const jaNaLista = reservasTemporarias.some(res => 
+      res.dia === dataFormatada && res.horario === horario
+    );
+
+    if (jaNaLista) {
+      warning('Você já adicionou este horário à lista.');
+      return;
+    }
+
+    const jaReservado = reservas.some(res => {
+      let dataReserva = res.dia;
+      if (typeof res.dia === 'string' && res.dia.includes('T')) {
+          dataReserva = res.dia.split('T')[0];
+      }
+      return dataReserva === dataFormatada && 
+             formatarHorarioBrasil(res.horario) === formatarHorarioBrasil(horario) && 
+             res.status !== 'cancelado' && 
+             res.status !== 'recusado' &&
+             res.status !== 'negado';
+    });
+
+    if (jaReservado) {
+      warning('Você já possui um agendamento neste horário.');
+      return;
+    }
+
     if (dataFormatada && !datasSelecionadas.includes(dataFormatada)) {
       setDatasSelecionadas([...datasSelecionadas, dataFormatada]);
     }
@@ -721,7 +749,12 @@ const adicionarDiaReserva = () => {
                   {profissionalInfo.valorConsulta && (
                     <InfoSection>
                       <InfoLabel>Valor da Consulta:</InfoLabel>
-                      <InfoValue>R$ {parseFloat(profissionalInfo.valorConsulta).toFixed(2).replace('.', ',')}</InfoValue>
+                      <InfoValue>
+                        {profissionalInfo.valorConsulta === 'A negociar' 
+                          ? 'A negociar' 
+                          : `R$ ${parseFloat(profissionalInfo.valorConsulta).toFixed(2).replace('.', ',')}`
+                        }
+                      </InfoValue>
                     </InfoSection>
                   )}
                 </InfoProfissionalContainer>
@@ -768,6 +801,31 @@ const adicionarDiaReserva = () => {
                         </option>
                       ))}
                     </select>
+
+                    {datasSelecionadas.length > 0 && (
+                      <Selecao>
+                        <H3>Consultas Selecionadas</H3>
+                        <Div>
+                          {datasSelecionadas.map((data, index) => {
+                            const dataFormatada = new Date(data + 'T00:00:00').toLocaleDateString('pt-BR');
+                            return (
+                              <Div_2 key={index}>
+                                <Paragrafo>{`Data: ${dataFormatada}`}</Paragrafo>
+                                <Lista>
+                                  {reservasTemporarias
+                                    .filter(reserva => reserva.dia === data)
+                                    .map((reserva, idx) => (
+                                      <Linha key={idx}>
+                                        <span>{formatarHorarioBrasil(reserva.horario)}</span>
+                                      </Linha>
+                                    ))}
+                                </Lista>
+                              </Div_2>
+                            );
+                          })}
+                        </Div>
+                      </Selecao>
+                    )}
                   </DataHorarioWrapper>
                   {profissionalLocation && !isNaN(profissionalLocation.lat) && !isNaN(profissionalLocation.lng) ? (
                     <MapaContainer>
@@ -822,30 +880,6 @@ const adicionarDiaReserva = () => {
               </FormularioReserva>
               </AgendamentoContainer>
             </>
-          )}
-          {datasSelecionadas.length > 0 && (
-            <Selecao>
-              <H3>Consultas Selecionadas</H3>
-              <Div>
-                {datasSelecionadas.map((data, index) => {
-                  const dataFormatada = new Date(data + 'T00:00:00').toLocaleDateString('pt-BR');
-                  return (
-                    <Div_2 key={index}>
-                      <Paragrafo>{`Data: ${dataFormatada}`}</Paragrafo>
-                      <Lista>
-                        {reservasTemporarias
-                          .filter(reserva => reserva.dia === data)
-                          .map((reserva, idx) => (
-                            <Linha key={idx}>
-                              <span>{formatarHorarioBrasil(reserva.horario)}</span>
-                            </Linha>
-                          ))}
-                      </Lista>
-                    </Div_2>
-                  );
-                })}
-              </Div>
-            </Selecao>
           )}
         </Container_Important>
   
