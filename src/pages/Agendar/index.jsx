@@ -899,6 +899,47 @@ const adicionarDiaReserva = (e) => {
                   )}
                   {reserva.status === 'confirmado' ? (
                     <p>Confirmado: {formatarDataExibicao(reserva.dia)} às {formatarHorarioBrasil(reserva.horario)}</p>
+                  ) : reserva.status === 'aguardando_confirmacao_paciente' ? (
+                    <>
+                      <br />
+                      <span style={{ color: 'blue', fontWeight: 'bold' }}>Alteração Solicitada pelo Profissional</span>
+                      <p>Novo horário: {formatarDataExibicao(reserva.dia)} às {formatarHorarioBrasil(reserva.horario)}</p>
+                      <div style={{ marginTop: '10px' }}>
+                        <Button 
+                          onClick={async () => {
+                            try {
+                              await axios.patch(`http://localhost:3000/reservas/${reserva.id}`, { status: 'confirmado' });
+                              success('Alteração confirmada com sucesso!');
+                              // Atualiza a lista localmente
+                              setReservas(prev => prev.map(r => r.id === reserva.id ? { ...r, status: 'confirmado' } : r));
+                            } catch (error) {
+                              console.error('Erro ao confirmar alteração:', error);
+                              showError('Erro ao confirmar alteração.');
+                            }
+                          }} 
+                          style={{ backgroundColor: 'green', color: 'white', marginRight: '10px', fontSize: '14px', padding: '5px 10px' }}
+                        >
+                          Confirmar Alteração
+                        </Button>
+                        <Button 
+                          onClick={async () => {
+                            if (window.confirm('Tem certeza que deseja desistir desta consulta?')) {
+                              try {
+                                await axios.delete(`http://localhost:3000/reservas/${reserva.id}`);
+                                success('Consulta cancelada com sucesso.');
+                                setReservas(prev => prev.filter(r => r.id !== reserva.id));
+                              } catch (error) {
+                                console.error('Erro ao cancelar consulta:', error);
+                                showError('Erro ao cancelar consulta.');
+                              }
+                            }
+                          }} 
+                          style={{ backgroundColor: 'red', color: 'white', fontSize: '14px', padding: '5px 10px' }}
+                        >
+                          Desistir
+                        </Button>
+                      </div>
+                    </>
                   ) : (
                     <>
                       <br />

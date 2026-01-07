@@ -119,7 +119,7 @@ const AdminDashboard = () => {
     });
   };
 
-  const handleUpdateReserva = async () => {
+  const handleUpdateReserva = async (novoStatus = null) => {
     if (!editReservaId || !editReservaData || !editReservaHorario) {
         warning('Preencha todos os campos.');
         return;
@@ -135,13 +135,23 @@ const AdminDashboard = () => {
         const horarioFinal = new Date(horarioInicial.getTime() + 60 * 60 * 1000); 
         const horarioFinalFormatado = `${horarioFinal.getHours().toString().padStart(2, '0')}:${horarioFinal.getMinutes().toString().padStart(2, '0')}`;
 
-        await axios.patch(`http://localhost:3000/reservas/${editReservaId}`, {
+        const payload = {
             dia: dataFormatada,
             horario: editReservaHorario,
             horarioFinal: horarioFinalFormatado
-        });
+        };
 
-        success('Consulta atualizada com sucesso!');
+        // Se novoStatus for passado, usa ele (ex: 'confirmado')
+        // Se não for passado (clicou em Salvar Alterações), define como 'aguardando_confirmacao_paciente'
+        if (novoStatus) {
+            payload.status = novoStatus;
+        } else {
+            payload.status = 'aguardando_confirmacao_paciente';
+        }
+
+        await axios.patch(`http://localhost:3000/reservas/${editReservaId}`, payload);
+
+        success(novoStatus === 'confirmado' ? 'Consulta confirmada e atualizada!' : 'Consulta atualizada. Aguardando confirmação do paciente.');
         setShowReservaEdit(false);
         setEditReservaId(null);
         buscarReservas();
@@ -882,7 +892,6 @@ const AdminDashboard = () => {
                 <Th>Dia</Th>
                 <Th>Horário</Th>
                 <Th>Status</Th>
-                <Th>Tempo de Falta</Th>
                 <Th>Ações</Th>
               </tr>
             </thead>
@@ -895,7 +904,6 @@ const AdminDashboard = () => {
                   <Td>{formatarDataExibicao(reserva.dia)}</Td>
                   <Td>{formatarHorarioBrasil(reserva.horario)}</Td>
                   <Td>{reserva.status}</Td>
-                  <Td>{reserva.motivoFalta}</Td>
                   <Td>
                     {reserva.status === 'confirmado' ? (
                       <Button onClick={() => toggleStatus(reserva)} style={{ background: 'orange', color: 'white' }}>
@@ -1506,12 +1514,12 @@ const AdminDashboard = () => {
                 required
             />
 
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                <Button onClick={handleUpdateReserva} style={{ backgroundColor: 'green', color: 'white' }}>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px', flexWrap: 'wrap' }}>
+                <Button onClick={() => handleUpdateReserva()} style={{ backgroundColor: 'blue', color: 'white' }}>
                     Salvar Alterações
                 </Button>
                 <Button onClick={() => setShowReservaEdit(false)} style={{ backgroundColor: 'gray', color: 'white' }}>
-                    Cancelar
+                    Fechar
                 </Button>
             </div>
         </FormContainer>

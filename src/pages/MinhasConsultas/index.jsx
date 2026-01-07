@@ -148,6 +148,8 @@ const MinhasConsultas = () => {
         return '#ffc107';
       case 'negado':
         return '#dc3545';
+      case 'aguardando_confirmacao_paciente':
+        return '#ffc107'; // Yellow for warning/attention
       default:
         return '#6c757d';
     }
@@ -161,8 +163,23 @@ const MinhasConsultas = () => {
         return 'Pendente';
       case 'negado':
         return 'Negado';
+      case 'aguardando_confirmacao_paciente':
+        return 'Alteração Solicitada';
       default:
         return 'Pendente';
+    }
+  };
+
+  const handleConfirmarAlteracao = async (consultaId) => {
+    try {
+      await axios.patch(`http://localhost:3000/reservas/${consultaId}`, {
+        status: 'confirmado'
+      });
+      success('Alteração confirmada com sucesso!');
+      buscarConsultas();
+    } catch (error) {
+      console.error('Erro ao confirmar alteração:', error);
+      showError('Erro ao confirmar alteração.');
     }
   };
 
@@ -308,6 +325,21 @@ const MinhasConsultas = () => {
                   {getStatusLabel(consulta.status)}
                 </StatusBadge>
               </ConsultaHeader>
+
+              {consulta.status === 'aguardando_confirmacao_paciente' && (
+                  <div style={{ 
+                      backgroundColor: '#fff3cd', 
+                      color: '#856404', 
+                      padding: '10px', 
+                      borderRadius: '4px', 
+                      marginTop: '10px',
+                      marginBottom: '10px',
+                      fontSize: '14px',
+                      border: '1px solid #ffeeba'
+                  }}>
+                      <strong>Atenção:</strong> O profissional propôs uma alteração para esta consulta.
+                  </div>
+              )}
               
               <ConsultaInfo>
                 {user.tipoUsuario === 'profissional' && consulta.nomePaciente && (
@@ -335,12 +367,28 @@ const MinhasConsultas = () => {
               </ConsultaInfo>
               
               <ButtonsContainer>
-                <EditButton onClick={() => handleEditarConsulta(consulta)}>
-                  Editar
-                </EditButton>
-                <CancelButton onClick={() => handleCancelarConsulta(consulta.id)}>
-                  Cancelar Consulta
-                </CancelButton>
+                {consulta.status === 'aguardando_confirmacao_paciente' ? (
+                  <>
+                    <EditButton 
+                      onClick={() => handleConfirmarAlteracao(consulta.id)} 
+                      style={{ backgroundColor: '#28a745' }}
+                    >
+                      Confirmar Alteração
+                    </EditButton>
+                    <CancelButton onClick={() => handleCancelarConsulta(consulta.id)}>
+                      Desistir
+                    </CancelButton>
+                  </>
+                ) : (
+                  <>
+                    <EditButton onClick={() => handleEditarConsulta(consulta)}>
+                      Editar
+                    </EditButton>
+                    <CancelButton onClick={() => handleCancelarConsulta(consulta.id)}>
+                      Cancelar Consulta
+                    </CancelButton>
+                  </>
+                )}
               </ButtonsContainer>
             </ConsultaCard>
           ))
