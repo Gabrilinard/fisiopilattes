@@ -43,6 +43,8 @@ const Agendar = () => {
   const [profissionalLocation, setProfissionalLocation] = useState(null);
   const [enderecoCompleto, setEnderecoCompleto] = useState('');
   const [profissionalInfo, setProfissionalInfo] = useState(null);
+  const [horariosDisponiveis, setHorariosDisponiveis] = useState([]);
+  const [reservasProfissional, setReservasProfissional] = useState([]);
 
   const formatarDataBrasil = (data) => {
     if (!data) return '';
@@ -145,15 +147,44 @@ const Agendar = () => {
                 const profData = profResponse.data;
                 console.log('Dados do profissional recebidos:', profData);
                 
+                let diasAtendimento = [];
+                try {
+                  diasAtendimento = typeof profData.diasAtendimento === 'string' 
+                    ? JSON.parse(profData.diasAtendimento) 
+                    : profData.diasAtendimento || [];
+                } catch (e) {
+                  diasAtendimento = profData.diasAtendimento ? [profData.diasAtendimento] : [];
+                }
+
+                let horariosAtendimento = {};
+                try {
+                  horariosAtendimento = typeof profData.horariosAtendimento === 'string'
+                    ? JSON.parse(profData.horariosAtendimento)
+                    : profData.horariosAtendimento || {};
+                } catch (e) {
+                  console.error('Erro ao parsear horariosAtendimento:', e);
+                }
+
                 setProfissionalInfo({
+                  id: profissional.id,
                   nome: profData.nome,
                   sobrenome: profData.sobrenome,
                   descricao: profData.descricao,
                   publicoAtendido: profData.publicoAtendido,
                   modalidade: profData.modalidade,
                   cidade: profData.cidade,
-                  ufRegiao: profData.ufRegiao
+                  ufRegiao: profData.ufRegiao,
+                  valorConsulta: profData.valorConsulta,
+                  diasAtendimento: diasAtendimento,
+                  horariosAtendimento: horariosAtendimento
                 });
+
+                axios.get(`http://localhost:3000/reservas?profissional_id=${profissional.id}`)
+                  .then(resReservas => {
+                    setReservasProfissional(resReservas.data);
+                  })
+                  .catch(err => console.error('Erro ao buscar reservas do profissional:', err));
+
 
                 if (profData.latitude && profData.longitude) {
                   const lat = parseFloat(profData.latitude);
@@ -251,6 +282,53 @@ const Agendar = () => {
     const novaHora = (hora + 1) % 24;
     return `${novaHora.toString().padStart(2, '0')}:${minuto.toString().padStart(2, '0')}`;
   };
+
+  useEffect(() => {
+    if (profissionalInfo && dataSelecionada) {
+      const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+      const diaSemana = diasSemana[dataSelecionada.getDay()];
+      
+      let horariosDoDia = [];
+      if (profissionalInfo.horariosAtendimento) {
+        horariosDoDia = profissionalInfo.horariosAtendimento[diaSemana] || [];
+      }
+
+      const dataFormatada = formatarDataBrasil(dataSelecionada);
+      
+      const horariosLivres = horariosDoDia.filter(horario => {
+        const ocupado = reservasProfissional.some(reserva => {
+            let dataReserva = reserva.dia;
+            if (typeof reserva.dia === 'string' && reserva.dia.includes('T')) {
+                dataReserva = reserva.dia.split('T')[0];
+            }
+            const horarioReserva = formatarHorarioBrasil(reserva.horario);
+            
+            return dataReserva === dataFormatada && 
+                   horarioReserva === horario && 
+                   reserva.status !== 'cancelado' && 
+                   reserva.status !== 'recusado';
+        });
+        return !ocupado;
+      });
+
+      setHorariosDisponiveis(horariosLivres);
+      
+      if (horario && !horariosLivres.includes(horario)) {
+          setHorario('');
+      }
+    }
+  }, [dataSelecionada, profissionalInfo, reservasProfissional]);
+
+  const isDateAvailable = (date) => {
+    if (!profissionalInfo || !profissionalInfo.diasAtendimento || profissionalInfo.diasAtendimento.length === 0) return true;
+    
+    const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const diaSemana = diasSemana[date.getDay()];
+    
+    if (profissionalInfo.diasAtendimento.includes('Todos os dias')) return true;
+    return profissionalInfo.diasAtendimento.includes(diaSemana);
+  };
+
 
 
   useEffect(() => {
@@ -639,6 +717,13 @@ const adicionarDiaReserva = () => {
                       </div>
                     </InfoSection>
                   )}
+
+                  {profissionalInfo.valorConsulta && (
+                    <InfoSection>
+                      <InfoLabel>Valor da Consulta:</InfoLabel>
+                      <InfoValue>R$ {parseFloat(profissionalInfo.valorConsulta).toFixed(2).replace('.', ',')}</InfoValue>
+                    </InfoSection>
+                  )}
                 </InfoProfissionalContainer>
               )}
 
@@ -652,6 +737,7 @@ const adicionarDiaReserva = () => {
                         selected={dataSelecionada}
                         onChange={(date) => setDataSelecionada(date)}
                         minDate={new Date()}
+                        filterDate={isDateAvailable}
                         dateFormat="dd/MM/yyyy"
                         locale={ptBR}
                         showPopperArrow={false}
@@ -659,59 +745,29 @@ const adicionarDiaReserva = () => {
                       />
                     </DatePickerWrapper>
                     <label>Horário:</label>
-                    <Input 
-                      type="text" 
-                      placeholder="HH:MM (ex: 14:30)"
-                      value={horario ? (formatarHorarioBrasil(horario) || horario) : ''} 
+                    <select
+                      value={horario}
                       onChange={(e) => {
-                        let valor = e.target.value.replace(/\D/g, '');
-                        
-                        if (valor.length <= 2) {
-                          setHorario(valor);
-                        } else if (valor.length <= 4) {
-                          setHorario(valor.slice(0, 2) + ':' + valor.slice(2));
-                        } else {
-                          setHorario(valor.slice(0, 2) + ':' + valor.slice(2, 4));
-                        }
+                        setHorario(e.target.value);
+                        setHorarioFinal(calcularHorarioFinal(e.target.value));
                       }}
-                      onBlur={(e) => {
-                        let valor = e.target.value;
-                        if (valor.includes(' ')) {
-                          const partes = valor.split(' ');
-                          if (partes.length >= 2) {
-                            const horaMinuto = partes[0];
-                            const periodo = partes[1].toUpperCase();
-                            const [hora, minuto] = horaMinuto.split(':');
-                            let horas = parseInt(hora, 10);
-                            
-                            if (periodo === 'PM' && horas !== 12) {
-                              horas += 12;
-                            } else if (periodo === 'AM' && horas === 12) {
-                              horas = 0;
-                            }
-                            
-                            valor = `${String(horas).padStart(2, '0')}:${minuto || '00'}`;
-                          }
-                        }
-                        
-                        const horarioFormatado = formatarHorarioBrasil(valor);
-                        if (horarioFormatado && horarioFormatado.match(/^\d{2}:\d{2}$/)) {
-                          const [h, m] = horarioFormatado.split(':');
-                          if (parseInt(h) >= 0 && parseInt(h) <= 23 && parseInt(m) >= 0 && parseInt(m) <= 59) {
-                            setHorario(horarioFormatado);
-                            setHorarioFinal(calcularHorarioFinal(horarioFormatado));
-                          }
-                        } else if (valor.match(/^\d{2}:\d{2}$/)) {
-                          const [h, m] = valor.split(':');
-                          if (parseInt(h) >= 0 && parseInt(h) <= 23 && parseInt(m) >= 0 && parseInt(m) <= 59) {
-                            setHorario(valor);
-                            setHorarioFinal(calcularHorarioFinal(valor));
-                          }
-                        }
+                      required
+                      style={{
+                        padding: '10px',
+                        borderRadius: '5px',
+                        border: '1px solid #ccc',
+                        width: '100%',
+                        fontSize: '16px',
+                        marginTop: '5px'
                       }}
-                      maxLength={5}
-                      required 
-                    />
+                    >
+                      <option value="">Selecione um horário</option>
+                      {horariosDisponiveis.map((hora) => (
+                        <option key={hora} value={hora}>
+                          {hora}
+                        </option>
+                      ))}
+                    </select>
                   </DataHorarioWrapper>
                   {profissionalLocation && !isNaN(profissionalLocation.lat) && !isNaN(profissionalLocation.lng) ? (
                     <MapaContainer>

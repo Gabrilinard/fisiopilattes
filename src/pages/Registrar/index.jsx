@@ -190,6 +190,9 @@ const Registro = () => {
   const [descricao, setDescricao] = useState('');
   const [publicoAtendido, setPublicoAtendido] = useState('');
   const [modalidade, setModalidade] = useState('');
+  const [valorConsulta, setValorConsulta] = useState('');
+  const [diasAtendimento, setDiasAtendimento] = useState([]);
+  const [horariosAtendimento, setHorariosAtendimento] = useState({});
   const [cpf, setCpf] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -340,17 +343,13 @@ const Registro = () => {
     
     const apenasNumeros = cpf.replace(/\D/g, '');
     
-    // Verifica se tem 11 dígitos
     if (apenasNumeros.length !== 11) return false;
     
-    // Verifica se todos os dígitos são iguais (CPF inválido)
     if (/^(\d)\1{10}$/.test(apenasNumeros)) return false;
     
-    // Validação dos dígitos verificadores
     let soma = 0;
     let resto;
     
-    // Valida primeiro dígito
     for (let i = 1; i <= 9; i++) {
       soma += parseInt(apenasNumeros.substring(i - 1, i)) * (11 - i);
     }
@@ -358,7 +357,6 @@ const Registro = () => {
     if (resto === 10 || resto === 11) resto = 0;
     if (resto !== parseInt(apenasNumeros.substring(9, 10))) return false;
     
-    // Valida segundo dígito
     soma = 0;
     for (let i = 1; i <= 10; i++) {
       soma += parseInt(apenasNumeros.substring(i - 1, i)) * (12 - i);
@@ -416,6 +414,71 @@ const Registro = () => {
     'Neurocirurgião',
     'Cirurgião Pediátrico'
   ];
+
+  const diasSemana = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+
+  const handleDiaChange = (e) => {
+    const dia = e.target.value;
+    if (dia === 'Todos os dias') {
+      // Se "Todos os dias" foi selecionado (verificamos se já temos todos os dias selecionados)
+      const todosSelecionados = diasSemana.every(d => diasAtendimento.includes(d));
+      
+      if (todosSelecionados) {
+        setDiasAtendimento([]);
+        setHorariosAtendimento({});
+      } else {
+        setDiasAtendimento([...diasSemana]);
+        const newHorarios = {};
+        diasSemana.forEach(d => {
+            newHorarios[d] = horariosAtendimento[d] || ['08:00'];
+        });
+        setHorariosAtendimento(newHorarios);
+      }
+    } else {
+      // Toggle dia individual
+      if (diasAtendimento.includes(dia)) {
+        setDiasAtendimento(diasAtendimento.filter(d => d !== dia));
+        const newHorarios = { ...horariosAtendimento };
+        delete newHorarios[dia];
+        setHorariosAtendimento(newHorarios);
+      } else {
+        setDiasAtendimento([...diasAtendimento, dia]);
+        setHorariosAtendimento({
+            ...horariosAtendimento,
+            [dia]: ['08:00']
+        });
+      }
+    }
+  };
+
+  const handleAddHorario = (dia) => {
+    setHorariosAtendimento(prev => ({
+      ...prev,
+      [dia]: [...(prev[dia] || []), '']
+    }));
+  };
+
+  const handleRemoveHorario = (dia, index) => {
+    setHorariosAtendimento(prev => {
+        const novosHorarios = [...prev[dia]];
+        novosHorarios.splice(index, 1);
+        return {
+            ...prev,
+            [dia]: novosHorarios
+        };
+    });
+  };
+
+  const handleHorarioChange = (dia, index, valor) => {
+    setHorariosAtendimento(prev => {
+        const novosHorarios = [...prev[dia]];
+        novosHorarios[index] = valor;
+        return {
+            ...prev,
+            [dia]: novosHorarios
+        };
+    });
+  };
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -531,7 +594,10 @@ const Registro = () => {
           cidade: cidade.trim(),
           descricao: descricao.trim(),
           publicoAtendido: publicoAtendido.trim(),
-          modalidade: modalidade
+          modalidade: modalidade,
+          valorConsulta: valorConsulta,
+          diasAtendimento: diasAtendimento,
+          horariosAtendimento: horariosAtendimento
         })
       };
       
@@ -619,10 +685,9 @@ const Registro = () => {
 
           <Input type="text" placeholder="Nome" value={nome} onChange={(e) => setNome(e.target.value)} required />
           <Input type="text" placeholder="Sobrenome" value={sobrenome} onChange={(e) => setSobrenome(e.target.value)} required />
-          <label style={{ display: 'block', marginBottom: '8px', textAlign: 'left', fontWeight: 'bold' }}>CPF:</label>
           <Input 
             type="text" 
-            placeholder="000.000.000-00" 
+            placeholder="CPF" 
             value={cpf} 
             onChange={handleCPFChange}
             maxLength={14}
@@ -823,6 +888,111 @@ const Registro = () => {
                 <option value="online,domiciliar">Online e Domiciliar</option>
                 <option value="presencial,online,domiciliar">Presencial, Online e Domiciliar</option>
               </Select>
+
+              <label style={{ display: 'block', marginBottom: '2px', textAlign: 'left', fontWeight: 'bold' }}>Valor da Consulta (R$):</label>
+              <Input
+                type="number"
+                placeholder="Ex: 150.00"
+                value={valorConsulta}
+                onChange={(e) => setValorConsulta(e.target.value)}
+                required
+                min="0"
+                step="0.01"
+              />
+
+              <label style={{ display: 'block', marginBottom: '2px', textAlign: 'left', fontWeight: 'bold' }}>Dias de Atendimento:</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '15px' }}>
+                <Select onChange={handleDiaChange} value="">
+                  <option value="" disabled>Adicionar dia...</option>
+                  <option value="Todos os dias">Todos os dias</option>
+                  {diasSemana.map(dia => (
+                    <option key={dia} value={dia} disabled={diasAtendimento.includes(dia)}>
+                      {dia}
+                    </option>
+                  ))}
+                </Select>
+                
+                {diasAtendimento.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                    {diasAtendimento.map(dia => (
+                      <span key={dia} style={{ background: '#e0e0e0', padding: '5px 10px', borderRadius: '15px', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '14px' }}>
+                        {dia}
+                        <button 
+                          type="button" 
+                          onClick={() => handleDiaChange({ target: { value: dia } })}
+                          style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 'bold', color: '#ff4444', display: 'flex', alignItems: 'center', padding: 0 }}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {diasAtendimento.length > 0 && (
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '10px', textAlign: 'left', fontWeight: 'bold' }}>Horários por Dia:</label>
+                  {diasAtendimento.map(dia => (
+                    <div key={dia} style={{ marginBottom: '15px', padding: '10px', border: '1px solid #eee', borderRadius: '4px' }}>
+                      <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>{dia}</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                        {horariosAtendimento[dia]?.map((horario, index) => (
+                          <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <Input
+                              type="time"
+                              value={horario}
+                              onChange={(e) => handleHorarioChange(dia, index, e.target.value)}
+                              required
+                              style={{ width: '110px' }}
+                            />
+                            {horariosAtendimento[dia].length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveHorario(dia, index)}
+                                style={{
+                                  background: '#ff4444',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '50%',
+                                  width: '20px',
+                                  height: '20px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '12px'
+                                }}
+                                title="Remover horário"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => handleAddHorario(dia)}
+                          style={{
+                            background: '#28a745',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '5px 10px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px'
+                          }}
+                        >
+                          + Adicionar Horário
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
 
