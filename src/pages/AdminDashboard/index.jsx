@@ -48,6 +48,108 @@ const AdminDashboard = () => {
   const [editDescricao, setEditDescricao] = useState('');
   const [editPublicoAtendido, setEditPublicoAtendido] = useState('');
   const [editModalidade, setEditModalidade] = useState('');
+  const [editValorConsulta, setEditValorConsulta] = useState('');
+  const [editDiasAtendimento, setEditDiasAtendimento] = useState([]);
+  const [editHorariosAtendimento, setEditHorariosAtendimento] = useState({});
+  const [showReservaEdit, setShowReservaEdit] = useState(false);
+  const [editReservaId, setEditReservaId] = useState(null);
+  const [editReservaData, setEditReservaData] = useState(new Date());
+  const [editReservaHorario, setEditReservaHorario] = useState('');
+
+  const diasSemana = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+
+  const handleEditDiaChange = (e) => {
+    const dia = e.target.value;
+    if (dia === 'Todos os dias') {
+      const todosSelecionados = diasSemana.every(d => editDiasAtendimento.includes(d));
+      
+      if (todosSelecionados) {
+        setEditDiasAtendimento([]);
+        setEditHorariosAtendimento({});
+      } else {
+        setEditDiasAtendimento([...diasSemana]);
+        const newHorarios = {};
+        diasSemana.forEach(d => {
+            newHorarios[d] = editHorariosAtendimento[d] || ['08:00'];
+        });
+        setEditHorariosAtendimento(newHorarios);
+      }
+    } else {
+      if (editDiasAtendimento.includes(dia)) {
+        setEditDiasAtendimento(editDiasAtendimento.filter(d => d !== dia));
+        const newHorarios = { ...editHorariosAtendimento };
+        delete newHorarios[dia];
+        setEditHorariosAtendimento(newHorarios);
+      } else {
+        setEditDiasAtendimento([...editDiasAtendimento, dia]);
+        setEditHorariosAtendimento({
+            ...editHorariosAtendimento,
+            [dia]: ['08:00']
+        });
+      }
+    }
+  };
+
+  const handleEditAddHorario = (dia) => {
+    setEditHorariosAtendimento(prev => ({
+      ...prev,
+      [dia]: [...(prev[dia] || []), '']
+    }));
+  };
+
+  const handleEditRemoveHorario = (dia, index) => {
+    setEditHorariosAtendimento(prev => {
+        const novosHorarios = [...prev[dia]];
+        novosHorarios.splice(index, 1);
+        return {
+            ...prev,
+            [dia]: novosHorarios
+        };
+    });
+  };
+
+  const handleEditHorarioChange = (dia, index, valor) => {
+    setEditHorariosAtendimento(prev => {
+        const novosHorarios = [...prev[dia]];
+        novosHorarios[index] = valor;
+        return {
+            ...prev,
+            [dia]: novosHorarios
+        };
+    });
+  };
+
+  const handleUpdateReserva = async () => {
+    if (!editReservaId || !editReservaData || !editReservaHorario) {
+        warning('Preencha todos os campos.');
+        return;
+    }
+
+    try {
+        const ano = editReservaData.getFullYear();
+        const mes = String(editReservaData.getMonth() + 1).padStart(2, '0');
+        const dia = String(editReservaData.getDate()).padStart(2, '0');
+        const dataFormatada = `${ano}-${mes}-${dia}`;
+
+        const horarioInicial = new Date(`1970-01-01T${editReservaHorario}:00`);
+        const horarioFinal = new Date(horarioInicial.getTime() + 60 * 60 * 1000); 
+        const horarioFinalFormatado = `${horarioFinal.getHours().toString().padStart(2, '0')}:${horarioFinal.getMinutes().toString().padStart(2, '0')}`;
+
+        await axios.patch(`http://localhost:3000/reservas/${editReservaId}`, {
+            dia: dataFormatada,
+            horario: editReservaHorario,
+            horarioFinal: horarioFinalFormatado
+        });
+
+        success('Consulta atualizada com sucesso!');
+        setShowReservaEdit(false);
+        setEditReservaId(null);
+        buscarReservas();
+    } catch (error) {
+        console.error('Erro ao atualizar consulta:', error);
+        showError('Erro ao atualizar consulta.');
+    }
+  };
 
   const formatarHorarioBrasil = (horario) => {
     if (!horario) return '';
@@ -549,7 +651,10 @@ const AdminDashboard = () => {
       await axios.patch(`http://localhost:3000/usuarios/${editingUserId}/informacoes`, {
         descricao: editDescricao,
         publicoAtendido: editPublicoAtendido,
-        modalidade: editModalidade
+        modalidade: editModalidade,
+        valorConsulta: editValorConsulta,
+        diasAtendimento: editDiasAtendimento,
+        horariosAtendimento: editHorariosAtendimento
       });
 
       success('Informações atualizadas com sucesso!');
@@ -558,6 +663,9 @@ const AdminDashboard = () => {
       setEditDescricao('');
       setEditPublicoAtendido('');
       setEditModalidade('');
+      setEditValorConsulta('');
+      setEditDiasAtendimento([]);
+      setEditHorariosAtendimento({});
     } catch (error) {
       console.error('Erro ao atualizar informações:', error);
       showError('Erro ao atualizar informações.');
@@ -725,6 +833,29 @@ const AdminDashboard = () => {
                 setEditDescricao(userData.descricao || '');
                 setEditPublicoAtendido(userData.publicoAtendido || '');
                 setEditModalidade(userData.modalidade || '');
+                setEditValorConsulta(userData.valorConsulta || '');
+                
+                // Parse diasAtendimento
+                let dias = userData.diasAtendimento;
+                if (typeof dias === 'string') {
+                    try {
+                        dias = JSON.parse(dias);
+                    } catch (e) {
+                        dias = dias.split(',').map(d => d.trim()).filter(d => d);
+                    }
+                }
+                setEditDiasAtendimento(Array.isArray(dias) ? dias : []);
+
+                // Parse horariosAtendimento
+                let horarios = userData.horariosAtendimento;
+                if (typeof horarios === 'string') {
+                    try {
+                        horarios = JSON.parse(horarios);
+                    } catch (e) {
+                        horarios = {};
+                    }
+                }
+                setEditHorariosAtendimento(typeof horarios === 'object' && horarios !== null ? horarios : {});
               } catch (error) {
                 console.error('Erro ao buscar dados do usuário:', error);
                 showError('Erro ao carregar informações.');
@@ -818,6 +949,25 @@ const AdminDashboard = () => {
                         </div>
                       </div>
                     )}
+
+                    <Button onClick={() => {
+                      setEditReservaId(reserva.id);
+                      let dataReserva;
+                      if (typeof reserva.dia === 'string') {
+                          if (reserva.dia.includes('T')) {
+                              dataReserva = new Date(reserva.dia.split('T')[0] + 'T12:00:00');
+                          } else {
+                              dataReserva = new Date(reserva.dia + 'T12:00:00');
+                          }
+                      } else {
+                          dataReserva = new Date(reserva.dia);
+                      }
+                      setEditReservaData(dataReserva);
+                      setEditReservaHorario(reserva.horario);
+                      setShowReservaEdit(true);
+                    }} style={{ background: 'blue', color: 'white' }}>
+                      Editar
+                    </Button>
 
                     <Button onClick={() => removerReserva(reserva.id)} style={{ background: 'red', color: 'white' }}>
                       Remover
@@ -1186,6 +1336,129 @@ const AdminDashboard = () => {
             <option value="presencial,online,domiciliar">Presencial, Online e Domiciliar</option>
           </Select>
 
+          <Label>Valor da Consulta:</Label>
+          <div style={{ marginBottom: '15px' }}>
+             <Select
+               value={editValorConsulta === 'A negociar' ? 'A negociar' : 'Definir valor'}
+               onChange={(e) => {
+                 if (e.target.value === 'A negociar') {
+                   setEditValorConsulta('A negociar');
+                 } else {
+                   setEditValorConsulta('');
+                 }
+               }}
+               style={{ marginBottom: '10px' }}
+             >
+               <option value="Definir valor">Definir valor (R$)</option>
+               <option value="A negociar">Valor a negociar</option>
+             </Select>
+             
+             {editValorConsulta !== 'A negociar' && (
+               <Input
+                 type="number"
+                 placeholder="Ex: 150.00"
+                 value={editValorConsulta}
+                 onChange={(e) => setEditValorConsulta(e.target.value)}
+                 min="0"
+                 step="0.01"
+               />
+             )}
+          </div>
+
+          <Label>Dias de Atendimento:</Label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '15px' }}>
+            <Select onChange={handleEditDiaChange} value="">
+              <option value="" disabled>Adicionar dia...</option>
+              <option value="Todos os dias">Todos os dias</option>
+              {diasSemana.map(dia => (
+                <option key={dia} value={dia} disabled={editDiasAtendimento.includes(dia)}>
+                  {dia}
+                </option>
+              ))}
+            </Select>
+            
+            {editDiasAtendimento.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                {editDiasAtendimento.map(dia => (
+                  <span key={dia} style={{ background: '#e0e0e0', padding: '5px 10px', borderRadius: '15px', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '14px' }}>
+                    {dia}
+                    <button 
+                      type="button" 
+                      onClick={() => handleEditDiaChange({ target: { value: dia } })}
+                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 'bold', color: '#ff4444', display: 'flex', alignItems: 'center', padding: 0 }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {editDiasAtendimento.length > 0 && (
+            <div style={{ marginBottom: '20px' }}>
+              <Label>Horários por Dia:</Label>
+              {editDiasAtendimento.map(dia => (
+                <div key={dia} style={{ marginBottom: '15px', padding: '10px', border: '1px solid #eee', borderRadius: '4px' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>{dia}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                    {editHorariosAtendimento[dia]?.map((horario, index) => (
+                      <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Input
+                          type="time"
+                          value={horario}
+                          onChange={(e) => handleEditHorarioChange(dia, index, e.target.value)}
+                          required
+                          style={{ width: '110px' }}
+                        />
+                        {editHorariosAtendimento[dia].length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleEditRemoveHorario(dia, index)}
+                            style={{
+                              background: '#ff4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: '20px',
+                              height: '20px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '12px'
+                            }}
+                            title="Remover horário"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => handleEditAddHorario(dia)}
+                      style={{
+                        background: '#28a745',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '5px 10px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                    >
+                      + Adicionar Horário
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '10px' }}>
             <Button onClick={handleEditarInformacoes} style={{ backgroundColor: 'green', color: 'white' }}>
               Salvar Informações
@@ -1196,10 +1469,51 @@ const AdminDashboard = () => {
               setEditDescricao('');
               setEditPublicoAtendido('');
               setEditModalidade('');
+              setEditValorConsulta('');
+              setEditDiasAtendimento([]);
+              setEditHorariosAtendimento({});
             }} style={{ backgroundColor: 'gray', color: 'white' }}>
               Cancelar
             </Button>
           </div>
+        </FormContainer>
+      </DrawerContainer>
+
+      <DrawerContainer isOpen={showReservaEdit}>
+        <DrawerHeader>
+          <DrawerTitle>Editar Consulta</DrawerTitle>
+        </DrawerHeader>
+        <FormContainer style={{ maxWidth: '100%', boxShadow: 'none', padding: 0 }}>
+            <Label>Nova Data:</Label>
+            <DatePickerWrapper>
+            <DatePicker
+                selected={editReservaData}
+                onChange={(date) => setEditReservaData(date)}
+                minDate={new Date()}
+                dateFormat="dd/MM/yyyy"
+                locale={ptBR}
+                showPopperArrow={false}
+                required
+            />
+            </DatePickerWrapper>
+
+            <Label>Novo Horário (HH:mm):</Label>
+            <Input
+                type="text"
+                value={editReservaHorario}
+                onChange={(e) => setEditReservaHorario(e.target.value)}
+                maxLength={5}
+                required
+            />
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <Button onClick={handleUpdateReserva} style={{ backgroundColor: 'green', color: 'white' }}>
+                    Salvar Alterações
+                </Button>
+                <Button onClick={() => setShowReservaEdit(false)} style={{ backgroundColor: 'gray', color: 'white' }}>
+                    Cancelar
+                </Button>
+            </div>
         </FormContainer>
       </DrawerContainer>
 
