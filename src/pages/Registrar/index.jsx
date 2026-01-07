@@ -889,16 +889,35 @@ const Registro = () => {
                 <option value="presencial,online,domiciliar">Presencial, Online e Domiciliar</option>
               </Select>
 
-              <label style={{ display: 'block', marginBottom: '2px', textAlign: 'left', fontWeight: 'bold' }}>Valor da Consulta (R$):</label>
-              <Input
-                type="number"
-                placeholder="Ex: 150.00"
-                value={valorConsulta}
-                onChange={(e) => setValorConsulta(e.target.value)}
-                required
-                min="0"
-                step="0.01"
-              />
+              <label style={{ display: 'block', marginBottom: '2px', textAlign: 'left', fontWeight: 'bold' }}>Valor da Consulta:</label>
+              <div style={{ marginBottom: '15px' }}>
+                <Select
+                  value={valorConsulta === 'A negociar' ? 'A negociar' : 'Definir valor'}
+                  onChange={(e) => {
+                    if (e.target.value === 'A negociar') {
+                      setValorConsulta('A negociar');
+                    } else {
+                      setValorConsulta('');
+                    }
+                  }}
+                  style={{ marginBottom: '10px' }}
+                >
+                  <option value="Definir valor">Definir valor (R$)</option>
+                  <option value="A negociar">Valor a negociar</option>
+                </Select>
+                
+                {valorConsulta !== 'A negociar' && (
+                  <Input
+                    type="number"
+                    placeholder="Ex: 150.00"
+                    value={valorConsulta}
+                    onChange={(e) => setValorConsulta(e.target.value)}
+                    required={valorConsulta !== 'A negociar'}
+                    min="0"
+                    step="0.01"
+                  />
+                )}
+              </div>
 
               <label style={{ display: 'block', marginBottom: '2px', textAlign: 'left', fontWeight: 'bold' }}>Dias de Atendimento:</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '15px' }}>
