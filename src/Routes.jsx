@@ -10,6 +10,7 @@ import Home from "./pages/Home";
 import MinhasConsultas from "./pages/MinhasConsultas";
 import Registrar from "./pages/Registrar";
 import ResetPassword from "./pages/ResetPassword";
+import Urgencia from "./pages/Urgencia/urgencia";
 
 const ProtectedRoute = ({ element }) => {
     const { user } = useAuth();
@@ -26,6 +27,7 @@ const ProtectedRoute = ({ element }) => {
           <Route path="/Conta" element={<Conta />} />
           <Route path="/Agendar" element={<Agendar />} />
           <Route path="/AdminDashboard" element={<AdminDashboard />} />
+          <Route path="/urgencia" element={<Urgencia />} />
           <Route path="/profissionais" element={<EmpresasProfissionais />} />
           <Route path="/minhas-consultas" element={<MinhasConsultas />} />
           <Route path="/EsqueciSenha" element={<ForgotPassword />} />
