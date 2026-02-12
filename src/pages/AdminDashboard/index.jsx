@@ -55,6 +55,9 @@ const AdminDashboard = () => {
   const [editReservaId, setEditReservaId] = useState(null);
   const [editReservaData, setEditReservaData] = useState(new Date());
   const [editReservaHorario, setEditReservaHorario] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
+  const [showUrgencias, setShowUrgencias] = useState(false);
+  const [searchHistory, setSearchHistory] = useState('');
 
   const diasSemana = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 
@@ -739,7 +742,6 @@ const AdminDashboard = () => {
       const horarioFinal = new Date(horarioInicial.getTime() + 60 * 60 * 1000); 
       const horarioFinalFormatado = `${horarioFinal.getHours().toString().padStart(2, '0')}:${horarioFinal.getMinutes().toString().padStart(2, '0')}`;
 
-      // Formatar data no formato YYYY-MM-DD (mesmo formato usado na página Agendar)
       const ano = dataReserva.getFullYear();
       const mes = String(dataReserva.getMonth() + 1).padStart(2, '0');
       const dia = String(dataReserva.getDate()).padStart(2, '0');
@@ -756,7 +758,7 @@ const AdminDashboard = () => {
         telefone: telefoneReserva,
         usuario_id: userId,
         profissional_id: user.id,
-        status: 'confirmado', // Consultas criadas pelo profissional já vêm confirmadas
+        status: 'confirmado', 
       });
 
       success('Consulta criada com sucesso!');
@@ -799,6 +801,8 @@ const AdminDashboard = () => {
             <Button_2 onClick={() => {
               setShowConsultas(true);
               setShowReservas(false);
+              setShowHistory(false);
+              setShowUrgencias(false);
             }}>
               Ver Consultas
             </Button_2>
@@ -808,8 +812,26 @@ const AdminDashboard = () => {
             <Button_2 onClick={() => {
               setShowReservas(true);
               setShowConsultas(false);
+              setShowHistory(false);
+              setShowUrgencias(false);
             }}>
               Ver Solicitações
+            </Button_2>
+            <Button_2 onClick={() => {
+              setShowHistory(true);
+              setShowConsultas(false);
+              setShowReservas(false);
+              setShowUrgencias(false);
+            }}>
+              Ver Histórico
+            </Button_2>
+            <Button_2 onClick={() => {
+              setShowUrgencias(true);
+              setShowConsultas(false);
+              setShowReservas(false);
+              setShowHistory(false);
+            }} style={{backgroundColor: '#d32f2f'}}>
+              Ver Urgências
             </Button_2>
             <Button_2 onClick={async () => {
               try {
@@ -896,7 +918,35 @@ const AdminDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {reservas.map(reserva => (
+              {reservas.filter(reserva => {
+                if (!reserva.dia) return false;
+                
+                if (reserva.is_urgente) return false;
+
+                let dataReserva;
+                if (typeof reserva.dia === 'string') {
+                    let dataParaFormatar = reserva.dia;
+                    if (reserva.dia.includes('T')) {
+                        dataParaFormatar = reserva.dia.split('T')[0];
+                    }
+                    const partes = dataParaFormatar.split('-');
+                    if (partes.length === 3) {
+                        const [ano, mes, dia] = partes;
+                        dataReserva = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+                    } else {
+                        dataReserva = new Date(dataParaFormatar);
+                    }
+                } else {
+                    dataReserva = new Date(reserva.dia);
+                }
+                
+                dataReserva.setHours(0, 0, 0, 0);
+                const hoje = new Date();
+                hoje.setHours(0, 0, 0, 0);
+                
+                return dataReserva >= hoje;
+              })
+              .map(reserva => (
                 <tr key={reserva.id}>
                   <Td>{reserva.nome} {reserva.sobrenome}</Td>
                   <Td>{reserva.email}</Td>
@@ -981,6 +1031,164 @@ const AdminDashboard = () => {
                       Remover
                     </Button>
                   </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrapper>
+      )}
+
+      {showUrgencias && (
+        <TableWrapper>
+          <h3 style={{ padding: '0 20px', color: '#d32f2f' }}>Solicitações de Urgência</h3>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Nome</Th>
+                <Th>Telefone</Th>
+                <Th>Data</Th>
+                <Th>Horário</Th>
+                <Th>Descrição</Th>
+                <Th>Arquivo</Th>
+                <Th>Ações</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {reservas.filter(reserva => reserva.is_urgente).map(reserva => (
+                <tr key={reserva.id}>
+                  <Td>{reserva.nome} {reserva.sobrenome}</Td>
+                  <Td>{reserva.telefone}</Td>
+                  <Td>{formatarDataExibicao(reserva.dia)}</Td>
+                  <Td>{formatarHorarioBrasil(reserva.horario)}</Td>
+                  <Td>{reserva.descricao_urgencia}</Td>
+                  <Td>
+                    {reserva.arquivo_urgencia ? (
+                      <a href={`http://localhost:3000${reserva.arquivo_urgencia}`} target="_blank" rel="noopener noreferrer">
+                        Ver Arquivo
+                      </a>
+                    ) : 'Sem arquivo'}
+                  </Td>
+                  <Td>
+                    <Button onClick={() => {
+                         // Remover flag de urgente e confirmar
+                         axios.patch(`http://localhost:3000/reservas/${reserva.id}`, { is_urgente: false, status: 'confirmado' })
+                           .then(() => {
+                             success('Urgência atendida e convertida em consulta confirmada!');
+                             buscarReservas();
+                           })
+                           .catch(err => showError('Erro ao processar urgência.'));
+                    }} style={{ background: 'green', color: 'white' }}>
+                      Aceitar
+                    </Button>
+                    <Button onClick={() => {
+                      setEditReservaId(reserva.id);
+                      let dataReserva;
+                      if (typeof reserva.dia === 'string') {
+                          if (reserva.dia.includes('T')) {
+                              dataReserva = new Date(reserva.dia.split('T')[0] + 'T12:00:00');
+                          } else {
+                              dataReserva = new Date(reserva.dia + 'T12:00:00');
+                          }
+                      } else {
+                          dataReserva = new Date(reserva.dia);
+                      }
+                      setEditReservaData(dataReserva);
+                      setEditReservaHorario(reserva.horario);
+                      setShowReservaEdit(true);
+                    }} style={{ background: 'blue', color: 'white' }}>
+                      Editar
+                    </Button>
+                    <Button onClick={() => removerReserva(reserva.id)} style={{ background: 'red', color: 'white' }}>
+                      Remover
+                    </Button>
+                  </Td>
+                </tr>
+              ))}
+              {reservas.filter(reserva => reserva.is_urgente).length === 0 && (
+                <tr>
+                  <Td colSpan="7" style={{ textAlign: 'center' }}>Nenhuma solicitação de urgência encontrada.</Td>
+                </tr>
+              )}
+            </tbody>
+          </Table>
+        </TableWrapper>
+      )}
+
+      {showHistory && (
+        <TableWrapper>
+          <div style={{ marginBottom: '20px', padding: '0 20px' }}>
+            <h3 style={{ color: '#333', marginBottom: '10px' }}>Histórico de Consultas</h3>
+            <Input 
+              type="text" 
+              placeholder="Pesquisar por nome, email ou telefone..." 
+              value={searchHistory}
+              onChange={(e) => setSearchHistory(e.target.value)}
+              style={{ width: '100%', maxWidth: '400px' }}
+            />
+          </div>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Nome</Th>
+                <Th>Email</Th>
+                <Th>Telefone</Th>
+                <Th>Dia</Th>
+                <Th>Horário</Th>
+                <Th>Status</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {reservas.filter(reserva => {
+                if (!reserva.dia) return false;
+                
+                let dataReserva;
+                if (typeof reserva.dia === 'string') {
+                    let dataParaFormatar = reserva.dia;
+                    if (reserva.dia.includes('T')) {
+                        dataParaFormatar = reserva.dia.split('T')[0];
+                    }
+                    const partes = dataParaFormatar.split('-');
+                    if (partes.length === 3) {
+                        const [ano, mes, dia] = partes;
+                        dataReserva = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+                    } else {
+                        dataReserva = new Date(dataParaFormatar);
+                    }
+                } else {
+                    dataReserva = new Date(reserva.dia);
+                }
+                
+                dataReserva.setHours(0, 0, 0, 0);
+                const hoje = new Date();
+                hoje.setHours(0, 0, 0, 0);
+                
+                // Filtra apenas datas passadas
+                if (dataReserva >= hoje) return false;
+
+                if (searchHistory) {
+                    const query = searchHistory.toLowerCase();
+                    const nomeCompleto = `${reserva.nome || ''} ${reserva.sobrenome || ''}`.toLowerCase();
+                    return (
+                        nomeCompleto.includes(query) ||
+                        (reserva.email && reserva.email.toLowerCase().includes(query)) ||
+                        (reserva.telefone && reserva.telefone.includes(query))
+                    );
+                }
+                return true;
+              })
+              .sort((a, b) => {
+                  const dateA = new Date(a.dia);
+                  const dateB = new Date(b.dia);
+                  return dateB - dateA;
+              })
+              .map(reserva => (
+                <tr key={reserva.id}>
+                  <Td>{reserva.nome} {reserva.sobrenome}</Td>
+                  <Td>{reserva.email}</Td>
+                  <Td>{reserva.telefone}</Td>
+                  <Td>{formatarDataExibicao(reserva.dia)}</Td>
+                  <Td>{formatarHorarioBrasil(reserva.horario)}</Td>
+                  <Td>{reserva.status}</Td>
                 </tr>
               ))}
             </tbody>
