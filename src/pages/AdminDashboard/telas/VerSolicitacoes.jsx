@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Download, FileText, Search, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
 
 const PageLayout = styled.div`
@@ -18,7 +18,64 @@ const FormPanel = styled.div`
   width: 380px;
   flex-shrink: 0;
   @media (max-width: 768px) {
+    position: fixed;
+    inset: 0;
+    width: auto;
+    z-index: 1001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+`;
+
+const Overlay = styled.div`
+  display: none;
+  @media (max-width: 768px) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1000;
+  }
+`;
+
+const SheetCard = styled.div`
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+  @media (max-width: 768px) {
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    max-height: 85vh;
     width: 100%;
+    max-width: 440px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  }
+`;
+
+const DragHandle = styled.div`
+  display: none;
+  @media (max-width: 768px) {
+    display: flex;
+    justify-content: center;
+    padding: 10px 0 2px;
+    cursor: grab;
+    touch-action: none;
+  }
+`;
+
+const FormBody = styled.div`
+  padding: 16px 20px;
+  overflow-y: auto;
+  max-height: calc(100vh - 220px);
+  @media (max-width: 768px) {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
   }
 `;
 
@@ -173,6 +230,31 @@ const VerSolicitacoes = ({
   const [ordem, setOrdem] = useState('recentes');
   const [page, setPage] = useState(1);
 
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartY = useRef(0);
+
+  useEffect(() => {
+    setDragOffset(0);
+    setIsDragging(false);
+  }, [reservaSelecionada?.id]);
+
+  const handleDragStart = (clientY) => {
+    dragStartY.current = clientY;
+    setIsDragging(true);
+  };
+  const handleDragMove = (clientY) => {
+    const delta = clientY - dragStartY.current;
+    if (delta > 0) setDragOffset(delta);
+  };
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    if (dragOffset > 100) {
+      onFecharFormulario();
+    }
+    setDragOffset(0);
+  };
+
   const toggleFiltro = (set, setter, key) => {
     setter(prev => {
       const next = new Set(prev);
@@ -276,7 +358,6 @@ const VerSolicitacoes = ({
           </select>
         </div>
 
-        {/* Status filters */}
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
           {STATUS_FILTERS.map(f => (
             <Chip key={f.key} active={statusFiltros.has(f.key)} onClick={() => toggleFiltro(statusFiltros, setStatusFiltros, f.key)}>
@@ -285,7 +366,6 @@ const VerSolicitacoes = ({
           ))}
         </div>
 
-        {/* Day filters */}
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
           <span style={{ fontSize: '12px', color: '#888', fontWeight: '600', marginRight: '2px' }}>Dia:</span>
           {DIAS_SEMANA.map(d => (
@@ -303,7 +383,6 @@ const VerSolicitacoes = ({
           )}
         </div>
 
-        {/* List */}
         {pagina.length === 0 ? (
           <div style={{ ...CARD, padding: '48px', textAlign: 'center', color: '#888' }}>
             <p style={{ margin: 0 }}>Nenhuma solicitação encontrada</p>
@@ -382,7 +461,6 @@ const VerSolicitacoes = ({
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
                     {r.status === 'aguardando_confirmacao_paciente' && (
                       <span style={{ padding: '6px 14px', borderRadius: '7px', fontSize: '12px', fontWeight: '600', background: '#F3F4F6', color: '#9CA3AF' }}>
@@ -413,7 +491,6 @@ const VerSolicitacoes = ({
                     </button>
                   </div>
 
-                  {/* Negar form */}
                   {mostrarMotivo === r.id && (
                     <div style={{ marginTop: '12px', padding: '12px', background: '#FFF5F5', borderRadius: '8px' }} onClick={e => e.stopPropagation()}>
                       <input
@@ -487,31 +564,51 @@ const VerSolicitacoes = ({
         )}
       </div>
 
-      {/* Formulário side panel */}
       {reservaSelecionada && (
-        <FormPanel>
-          <div style={CARD}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #F0EFE9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <p style={{ margin: 0, fontWeight: '700', fontSize: '14px', color: '#1a1a1a' }}>Formulário do paciente</p>
-                <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#888' }}>
-                  {reservaSelecionada.nome} {reservaSelecionada.sobrenome}
-                </p>
+        <>
+          <Overlay onClick={onFecharFormulario} />
+          <FormPanel onClick={onFecharFormulario}>
+            <SheetCard
+              onClick={e => e.stopPropagation()}
+              style={{
+                transform: `translateY(${dragOffset}px)`,
+                transition: isDragging ? 'none' : 'transform 0.25s ease',
+              }}
+            >
+              <DragHandle
+                onTouchStart={e => handleDragStart(e.touches[0].clientY)}
+                onTouchMove={e => handleDragMove(e.touches[0].clientY)}
+                onTouchEnd={handleDragEnd}
+              >
+                <span style={{ width: '40px', height: '4px', borderRadius: '2px', background: '#DDD' }} />
+              </DragHandle>
+              <div
+                style={{ padding: '10px 20px 16px', borderBottom: '1px solid #F0EFE9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}
+                onTouchStart={e => handleDragStart(e.touches[0].clientY)}
+                onTouchMove={e => handleDragMove(e.touches[0].clientY)}
+                onTouchEnd={handleDragEnd}
+              >
+                <div>
+                  <p style={{ margin: 0, fontWeight: '700', fontSize: '14px', color: '#1a1a1a' }}>Formulário do paciente</p>
+                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#888' }}>
+                    {reservaSelecionada.nome} {reservaSelecionada.sobrenome}
+                  </p>
+                </div>
+                <button onClick={onFecharFormulario} style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '18px', padding: '0 4px' }}>✕</button>
               </div>
-              <button onClick={onFecharFormulario} style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '18px', padding: '0 4px' }}>✕</button>
-            </div>
-            <div style={{ padding: '16px 20px', maxHeight: 'calc(100vh - 220px)', overflowY: 'auto' }}>
-              {carregandoFormulario && <div style={{ textAlign: 'center', color: '#888', fontSize: '14px', padding: '20px 0' }}>Carregando...</div>}
-              {!carregandoFormulario && erroFormulario && <div style={{ color: '#EF4444', fontSize: '13px' }}>{erroFormulario}</div>}
-              {!carregandoFormulario && !erroFormulario && formularioSelecionado && (
-                (() => {
-                  const c = parseConteudo();
-                  return c ? <RenderConteudo valor={c} /> : <div style={{ color: '#aaa', fontSize: '13px' }}>Nenhuma informação preenchida.</div>;
-                })()
-              )}
-            </div>
-          </div>
-        </FormPanel>
+              <FormBody>
+                {carregandoFormulario && <div style={{ textAlign: 'center', color: '#888', fontSize: '14px', padding: '20px 0' }}>Carregando...</div>}
+                {!carregandoFormulario && erroFormulario && <div style={{ color: '#EF4444', fontSize: '13px' }}>{erroFormulario}</div>}
+                {!carregandoFormulario && !erroFormulario && formularioSelecionado && (
+                  (() => {
+                    const c = parseConteudo();
+                    return c ? <RenderConteudo valor={c} /> : <div style={{ color: '#aaa', fontSize: '13px' }}>Nenhuma informação preenchida.</div>;
+                  })()
+                )}
+              </FormBody>
+            </SheetCard>
+          </FormPanel>
+        </>
       )}
     </PageLayout>
   );
