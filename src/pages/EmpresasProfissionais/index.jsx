@@ -9,7 +9,7 @@ import Header from '../../components/Header';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { getAvatarColor, getInitials } from '../../utils/avatar';
-import { getProfissionaisByCategoria } from './api';
+import { getProfissionaisByCategoria, getStatusAusencia } from './api';
 
 const DARK_GREEN = '#1C5C40';
 const MID_GREEN = '#2D8A62';
@@ -388,6 +388,13 @@ const AgendaBtn = styled.button`
   transition: background 0.2s;
 
   &:hover { background: ${MID_GREEN}; }
+
+  &:disabled {
+    background: #C4C0B8;
+    cursor: not-allowed;
+  }
+
+  &:disabled:hover { background: #C4C0B8; }
 `;
 
 const EmptyMsg = styled.div`
@@ -411,6 +418,14 @@ const EmpresasProfissionais = () => {
   const [filtroPublico, setFiltroPublico] = useState('');
   const [filtroAvaliacao, setFiltroAvaliacao] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [bloqueioAgendamento, setBloqueioAgendamento] = useState(null);
+
+  useEffect(() => {
+    if (!user?.id) { setBloqueioAgendamento(null); return; }
+    getStatusAusencia(user.id)
+      .then(({ data }) => setBloqueioAgendamento(data?.bloqueadoAte ? data : null))
+      .catch(() => {});
+  }, [user?.id]);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -455,6 +470,11 @@ const EmpresasProfissionais = () => {
 
   const handleAgendar = (p) => {
     if (!user) { warning('Você precisa estar logado para agendar.'); navigate('/Entrar'); return; }
+    if (bloqueioAgendamento) {
+      const ateFmt = new Date(bloqueioAgendamento.bloqueadoAte).toLocaleDateString('pt-BR');
+      warning(`Você está temporariamente impedido de agendar novas consultas até ${ateFmt}.`);
+      return;
+    }
     navigate('/Agendar', { state: { nome: p.nomeCompleto, tipo: p.tipoProfissional, categoria: categoriaAtiva, profissionalId: p.id } });
   };
 
@@ -630,8 +650,12 @@ const EmpresasProfissionais = () => {
                     )}
                   </CardFooterSection>
 
-                  <AgendaBtn onClick={() => handleAgendar(p)}>
-                    Ver agenda →
+                  <AgendaBtn
+                    onClick={() => handleAgendar(p)}
+                    disabled={!!bloqueioAgendamento}
+                    title={bloqueioAgendamento ? `Bloqueado até ${new Date(bloqueioAgendamento.bloqueadoAte).toLocaleDateString('pt-BR')}` : undefined}
+                  >
+                    {bloqueioAgendamento ? 'Agendamento bloqueado' : 'Ver agenda →'}
                   </AgendaBtn>
                 </ProfCard>
               );
