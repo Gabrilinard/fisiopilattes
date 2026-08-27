@@ -118,7 +118,7 @@ const parseDia = (dia) => {
 
 const formatarTitulo = (chave) => {
   if (!chave) return '';
-  const t = { created_at: 'Criado em', updated_at: 'Atualizado em' };
+  const t = { created_at: 'Criado em', createdat: 'Criado em', updated_at: 'Atualizado em', updatedat: 'Atualizado em' };
   if (t[chave.toLowerCase()]) return t[chave.toLowerCase()];
   return String(chave)
     .replace(/_/g, ' ').replace(/([a-z0-9])([A-Z])/g, '$1 $2')
@@ -357,7 +357,7 @@ const VerSolicitacoes = ({
             <option value="antigas">Mais antigas</option>
           </select>
         </div>
-
+;
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
           {STATUS_FILTERS.map(f => (
             <Chip key={f.key} active={statusFiltros.has(f.key)} onClick={() => toggleFiltro(statusFiltros, setStatusFiltros, f.key)}>
