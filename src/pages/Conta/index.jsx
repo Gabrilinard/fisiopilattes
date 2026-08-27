@@ -1,5 +1,5 @@
-import { Check, Edit2, LogOut, Trash2, Users, X } from 'lucide-react';
-import { useState } from 'react';
+import { AlertTriangle, Check, Edit2, LogOut, Trash2, Users, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import Footer from '../../components/Footer';
@@ -7,7 +7,7 @@ import Header from '../../components/Header';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { OPCOES_GENERO } from '../../utils/titulo';
-import { excluirConta, updatePerfil } from './api';
+import { excluirConta, getStatusAusencia, updatePerfil } from './api';
 
 const DARK_GREEN = '#1C5C40';
 const MID_GREEN = '#2D8A62';
@@ -114,6 +114,24 @@ const Divider = styled.hr`
   border: none;
   border-top: 1px solid ${BORDER};
   margin: 0 0 20px;
+`;
+
+const BloqueioBanner = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #FFF5F5;
+  border: 1.5px solid #F5C6C6;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+`;
+
+const BloqueioTexto = styled.p`
+  margin: 0;
+  font-size: 0.8rem;
+  color: #8B2C2C;
+  line-height: 1.45;
 `;
 
 const InfoList = styled.div`
@@ -446,6 +464,14 @@ const Conta = () => {
     const [salvando, setSalvando] = useState(false);
     const [excluindo, setExcluindo] = useState(false);
     const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+    const [statusAusencia, setStatusAusencia] = useState(null);
+
+    useEffect(() => {
+        if (!user?.id) return;
+        getStatusAusencia(user.id)
+            .then(({ data }) => setStatusAusencia(data))
+            .catch(() => {});
+    }, [user?.id]);
 
     const initials = user
         ? `${user.nome?.[0] || ''}${user.sobrenome?.[0] || ''}`.toUpperCase()
@@ -532,9 +558,24 @@ const Conta = () => {
                             </UserNameBlock>
                         </UserHeader>
 
+                        {statusAusencia?.bloqueadoAte && (
+                            <BloqueioBanner>
+                                <AlertTriangle size={16} color="#C53030" style={{ flexShrink: 0, marginTop: '1px' }} />
+                                <BloqueioTexto>
+                                    Você está temporariamente impedido de agendar novas consultas até{' '}
+                                    {new Date(statusAusencia.bloqueadoAte).toLocaleDateString('pt-BR')}
+                                    {statusAusencia.motivoBloqueio ? ` (${statusAusencia.motivoBloqueio})` : ''}.
+                                </BloqueioTexto>
+                            </BloqueioBanner>
+                        )}
+
                         <Divider />
 
                         <InfoList>
+                            <InfoRow>
+                                <InfoLabel>Faltas registradas (máx. 2 para penalização)</InfoLabel>
+                                <InfoValue>{statusAusencia ? statusAusencia.totalAusencias : '—'}</InfoValue>
+                            </InfoRow>
                             <InfoRow>
                                 <InfoLabel>Nome</InfoLabel>
                                 {isEditing ? (
