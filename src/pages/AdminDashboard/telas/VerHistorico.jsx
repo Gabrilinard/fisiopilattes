@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Clock, Download, Search } from 'lucide-react';
 import styled from 'styled-components';
+import { marcarAtendido, marcarAusente } from '../api';
 
 const PagePad = styled.div`
   padding: 28px 32px;
@@ -18,7 +19,7 @@ const TableScroll = styled.div`
 
 const TableInner = styled.div`
   @media (max-width: 768px) {
-    min-width: 560px;
+    min-width: 680px;
   }
 `;
 
@@ -58,10 +59,56 @@ const getTipo = (r) => {
 
 const getDesfecho = (r) => {
   if (r.status === 'confirmado') return 'Atendido';
+  if (r.status === 'ausente') return 'Ausente';
   if (r.status === 'negado') return 'Cancelado';
   if (r.is_urgente) return 'Aguardando';
   return '—';
 };
+
+const DESFECHO_STYLE = {
+  Atendido: { bg: '#E8F5EF', color: '#1B4D3E' },
+  Ausente: { bg: '#FEE2E2', color: '#991B1B' },
+  Cancelado: { bg: '#F3F1EC', color: '#888' },
+  Aguardando: { bg: '#FFF3EE', color: '#E8611A' },
+  '—': { bg: 'transparent', color: '#888' },
+};
+
+const DesfechoBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: ${({ $bg }) => $bg};
+  color: ${({ $color }) => $color};
+`;
+
+const ActionBtn = styled.button`
+  border: 1.5px solid #E0DFD9;
+  background: white;
+  border-radius: 7px;
+  padding: 5px 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: Figtree, sans-serif;
+  white-space: nowrap;
+
+  &:hover { border-color: #bbb; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+`;
+
+const ModalOverlay = styled.div`
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+  display: flex; align-items: center; justify-content: center; z-index: 200;
+`;
+
+const ModalBox = styled.div`
+  background: white; border-radius: 14px; padding: 24px; width: 360px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15); font-family: Figtree, sans-serif;
+`;
 
 const getDuracao = (r) => {
   if (!r.horario || !r.horarioFinal) return '—';
@@ -78,9 +125,45 @@ const DATE_FILTERS = [
   { label: 'Tudo', days: null },
 ];
 
-const VerHistorico = ({ reservas, searchHistory, setSearchHistory, formatarDataExibicao, formatarHorarioBrasil }) => {
+const VerHistorico = ({ reservas, searchHistory, setSearchHistory, formatarDataExibicao, formatarHorarioBrasil, buscarReservas, notify }) => {
   const [dateFilter, setDateFilter] = useState(30);
   const [tipoFilter, setTipoFilter] = useState('');
+  const [salvandoId, setSalvandoId] = useState(null);
+  const [motivoModal, setMotivoModal] = useState(null); // reserva selecionada para marcar ausência
+  const [motivoTexto, setMotivoTexto] = useState('');
+
+  const handleAtendido = async (reserva) => {
+    setSalvandoId(reserva.id);
+    try {
+      await marcarAtendido(reserva.id);
+      notify?.success?.('Presença confirmada no histórico.');
+      await buscarReservas?.();
+    } catch {
+      notify?.showError?.('Erro ao confirmar presença.');
+    } finally {
+      setSalvandoId(null);
+    }
+  };
+
+  const abrirModalAusencia = (reserva) => {
+    setMotivoTexto('');
+    setMotivoModal(reserva);
+  };
+
+  const confirmarAusencia = async () => {
+    if (!motivoModal) return;
+    setSalvandoId(motivoModal.id);
+    try {
+      await marcarAusente(motivoModal.id, motivoTexto || null);
+      notify?.success?.('Ausência registrada.');
+      await buscarReservas?.();
+    } catch {
+      notify?.showError?.('Erro ao registrar ausência.');
+    } finally {
+      setSalvandoId(null);
+      setMotivoModal(null);
+    }
+  };
 
   const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
   const cutoff = dateFilter !== null ? new Date(hoje.getTime() - dateFilter * 86400000) : null;
@@ -174,10 +257,10 @@ const VerHistorico = ({ reservas, searchHistory, setSearchHistory, formatarDataE
           <TableInner>
           {/* Column headers */}
           <div style={{
-            display: 'grid', gridTemplateColumns: '2fr 1.2fr 0.9fr 1.1fr 0.7fr 32px',
+            display: 'grid', gridTemplateColumns: '1.8fr 1.1fr 0.8fr 1fr 0.6fr 1.9fr',
             padding: '12px 20px', borderBottom: '1.5px solid #F0EFE9',
           }}>
-            {['PACIENTE', 'DATA', 'TIPO', 'DESFECHO', 'DURAÇÃO', ''].map((h, i) => (
+            {['PACIENTE', 'DATA', 'TIPO', 'DESFECHO', 'DURAÇÃO', 'AÇÕES'].map((h, i) => (
               <span key={i} style={{ fontSize: '11px', fontWeight: '700', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</span>
             ))}
           </div>
@@ -200,7 +283,7 @@ const VerHistorico = ({ reservas, searchHistory, setSearchHistory, formatarDataE
               <div
                 key={r.id}
                 style={{
-                  display: 'grid', gridTemplateColumns: '2fr 1.2fr 0.9fr 1.1fr 0.7fr 32px',
+                  display: 'grid', gridTemplateColumns: '1.8fr 1.1fr 0.8fr 1fr 0.6fr 1.9fr',
                   padding: '14px 20px', borderBottom: i < filtradas.length - 1 ? '1px solid #F7F7F4' : 'none',
                   alignItems: 'center',
                 }}
@@ -224,19 +307,76 @@ const VerHistorico = ({ reservas, searchHistory, setSearchHistory, formatarDataE
                 </div>
 
                 {/* Desfecho */}
-                <span style={{ fontSize: '13px', color: '#555' }}>{desfecho}</span>
+                <div style={{ display: 'flex' }}>
+                  <DesfechoBadge $bg={DESFECHO_STYLE[desfecho]?.bg} $color={DESFECHO_STYLE[desfecho]?.color}>
+                    {desfecho}
+                  </DesfechoBadge>
+                </div>
 
                 {/* Duração */}
                 <span style={{ fontSize: '13px', color: '#888' }}>{duracao}</span>
 
                 {/* Actions */}
-                <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#bbb', fontSize: '16px', padding: '2px 4px', lineHeight: 1 }}>···</button>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {r.status !== 'negado' && (
+                    <>
+                      <ActionBtn
+                        disabled={salvandoId === r.id || r.status === 'confirmado'}
+                        onClick={() => handleAtendido(r)}
+                        title="Confirmar presença"
+                      >
+                        Presença
+                      </ActionBtn>
+                      <ActionBtn
+                        disabled={salvandoId === r.id || r.status === 'ausente'}
+                        onClick={() => abrirModalAusencia(r)}
+                        title="Marcar ausência"
+                      >
+                        Ausência
+                      </ActionBtn>
+                    </>
+                  )}
+                </div>
               </div>
             );
           })}
           </TableInner>
         </div>
         </TableScroll>
+      )}
+
+      {motivoModal && (
+        <ModalOverlay onClick={() => setMotivoModal(null)}>
+          <ModalBox onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: '17px', fontWeight: '700', margin: '0 0 6px', color: '#1a1a1a' }}>Marcar ausência</h3>
+            <p style={{ fontSize: '12.5px', color: '#888', margin: '0 0 14px', lineHeight: 1.4 }}>
+              Confirma que {`${motivoModal.nome || ''} ${motivoModal.sobrenome || ''}`.trim()} não compareceu a esta consulta?
+              Se o paciente já tinha confirmado presença, faltas repetidas podem bloquear novos agendamentos por 60 dias.
+            </p>
+            <textarea
+              value={motivoTexto}
+              onChange={e => setMotivoTexto(e.target.value)}
+              placeholder="Motivo da ausência (opcional)"
+              rows={3}
+              style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', border: '1.5px solid #E0DFD9', borderRadius: '8px', fontSize: '13px', fontFamily: 'Figtree, sans-serif', resize: 'vertical', marginBottom: '16px' }}
+            />
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={confirmarAusencia}
+                disabled={salvandoId === motivoModal.id}
+                style={{ flex: 1, padding: '10px', background: '#991B1B', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'Figtree, sans-serif' }}
+              >
+                {salvandoId === motivoModal.id ? 'Salvando...' : 'Confirmar ausência'}
+              </button>
+              <button
+                onClick={() => setMotivoModal(null)}
+                style={{ padding: '10px 14px', background: 'none', border: '1px solid #E0DFD9', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', color: '#888', fontFamily: 'Figtree, sans-serif' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </ModalBox>
+        </ModalOverlay>
       )}
     </PagePad>
   );

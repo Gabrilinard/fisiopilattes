@@ -5,6 +5,8 @@ export const createReserva = (data) => client.post('/reservas', data);
 export const updateReserva = (id, data) => client.patch(`/reservas/${id}`, data);
 export const negarReserva = (id, data) => client.patch(`/reservas/negado/${id}`, data);
 export const deleteReserva = (id) => client.delete(`/reservas/${id}`);
+export const marcarAusente = (id, motivoFalta) => client.put(`/reservas/solicitar/${id}`, { motivoFalta });
+export const marcarAtendido = (id) => client.put(`/reservas/marcarAtendido/${id}`);
 
 export const solicitarDados = (id) => client.get(`/usuarios/solicitarDados/${id}`);
 export const buscarPorCPF = (cpf) => client.get(`/usuarios/buscarPorCPF/${cpf}`);

@@ -239,6 +239,7 @@ const AdminDashboard = () => {
           <VerHistorico
             reservas={reservas} searchHistory={edicao.searchHistory} setSearchHistory={edicao.setSearchHistory}
             formatarDataExibicao={formatarDataExibicao} formatarHorarioBrasil={formatarHorarioBrasil}
+            buscarReservas={buscarReservas} notify={notify}
           />
         );
       case 'mapa':
