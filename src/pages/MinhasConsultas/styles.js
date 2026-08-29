@@ -317,14 +317,20 @@ export const CardFooter = styled.div`
   border-top: 1px solid ${BORDER};
   padding: 10px 24px;
   font-size: 0.8rem;
+  line-height: 1.5;
   color: ${MUTED};
   background: #FAFAF8;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
+
+  @media (max-width: 600px) {
+    padding: 10px 16px;
+  }
 `;
 
 export const LibeLink = styled.button`
+  display: inline;
   background: none;
   border: none;
   font-size: 0.8rem;
@@ -334,7 +340,9 @@ export const LibeLink = styled.button`
   text-decoration: underline;
   text-underline-offset: 2px;
   padding: 0;
+  margin: 0 2px;
   font-family: 'Figtree', sans-serif;
+  white-space: nowrap;
 `;
 
 export const ConfirmBar = styled.div`

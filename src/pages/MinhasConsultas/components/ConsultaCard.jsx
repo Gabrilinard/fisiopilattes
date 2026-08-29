@@ -225,15 +225,15 @@ const ConsultaCard = ({
               Atenção: faltar a uma consulta já confirmada pela 2ª vez bloqueia novos agendamentos por 60 dias.
             </span>
           </RescheduleBar>
-        ) : isActive && (
+        ) : isActive && !isPast && (
           <CardFooter>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <Calendar size={13} />
+            <Calendar size={13} style={{ flexShrink: 0, marginTop: 2 }} />
+            <span>
               {faltaMenosDe48h
-                ? 'Faltam menos de 48h — não é mais possível cancelar, mas você pode '
-                : 'Não vai poder ir? '}
+                ? 'Faltam menos de 48h — não é mais possível cancelar, mas você pode'
+                : 'Não vai poder ir?'}{' '}
               <LibeLink onClick={() => onLiberarHorario(c.id)}>Liberar horário</LibeLink>
-              &nbsp;— outro paciente pode aproveitá-lo.
+              {' '}— outro paciente pode aproveitá-lo.
             </span>
           </CardFooter>
         )}
