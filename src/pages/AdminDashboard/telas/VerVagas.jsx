@@ -41,6 +41,35 @@ const CandidatoInfo = styled.div`
   min-width: 0;
 `;
 
+const NameRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  @media (max-width: 360px) {
+    flex-wrap: wrap;
+  }
+`;
+
+const NomeCandidato = styled.span`
+  font-weight: 700;
+  font-size: 14px;
+  color: #1a1a1a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1 1 auto;
+  min-width: 60px;
+
+  @media (max-width: 360px) {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    min-width: 0;
+    flex-basis: 100%;
+  }
+`;
+
 const NotificarButton = styled.button`
   display: flex;
   align-items: center;
@@ -287,17 +316,17 @@ const VerVagas = ({ reservas, formatarDataExibicao, formatarHorarioBrasil, user,
                           </div>
 
                           <CandidatoInfo>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                              <span style={{ fontWeight: '700', fontSize: '14px', color: '#1a1a1a' }}>
+                            <NameRow>
+                              <NomeCandidato>
                                 {idx + 1}. {c.nome} {c.sobrenome}
-                              </span>
+                              </NomeCandidato>
                               {Boolean(c.is_urgente) && (
-                                <span style={{ background: '#E8611A', color: 'white', borderRadius: '10px', padding: '2px 7px', fontSize: '11px', fontWeight: '700' }}>
+                                <span style={{ background: '#E8611A', color: 'white', borderRadius: '10px', padding: '2px 7px', fontSize: '11px', fontWeight: '700', flexShrink: 0 }}>
                                   Urgência
                                 </span>
                               )}
-                            </div>
-                            <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            </NameRow>
+                            <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#888', wordBreak: 'break-word' }}>
                               {c.is_urgente
                                 ? (c.descricao_urgencia || 'Consulta urgente')
                                 : `${formatarDataExibicao(String(c.dia).split('T')[0])} às ${formatarHorarioBrasil(c.horario)}`}
