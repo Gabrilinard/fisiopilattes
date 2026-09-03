@@ -32,6 +32,32 @@ const CandidatoRow = styled.div`
   border: 1px solid ${({ $urgent }) => $urgent ? '#FED7B0' : '#E8E8E2'};
   @media (max-width: 480px) {
     flex-wrap: wrap;
+    align-items: flex-start;
+  }
+`;
+
+const CandidatoInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const NotificarButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Figtree', sans-serif;
+  flex-shrink: 0;
+
+  @media (max-width: 480px) {
+    flex-basis: 100%;
+    margin-top: 8px;
+    padding: 9px 16px;
   }
 `;
 
@@ -260,8 +286,8 @@ const VerVagas = ({ reservas, formatarDataExibicao, formatarHorarioBrasil, user,
                             )}
                           </div>
 
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <CandidatoInfo>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                               <span style={{ fontWeight: '700', fontSize: '14px', color: '#1a1a1a' }}>
                                 {idx + 1}. {c.nome} {c.sobrenome}
                               </span>
@@ -276,23 +302,20 @@ const VerVagas = ({ reservas, formatarDataExibicao, formatarHorarioBrasil, user,
                                 ? (c.descricao_urgencia || 'Consulta urgente')
                                 : `${formatarDataExibicao(String(c.dia).split('T')[0])} às ${formatarHorarioBrasil(c.horario)}`}
                             </p>
-                          </div>
+                          </CandidatoInfo>
 
-                          <button
+                          <NotificarButton
                             onClick={() => notificarUm(reserva, c)}
                             disabled={jaNotificado || enviando}
                             style={{
-                              display: 'flex', alignItems: 'center', gap: '6px',
-                              padding: '8px 16px', borderRadius: '8px', border: 'none',
                               background: jaNotificado ? '#D1FAE5' : '#1B4D3E',
                               color: jaNotificado ? '#065F46' : 'white',
-                              fontSize: '13px', fontWeight: '600', cursor: jaNotificado || enviando ? 'default' : 'pointer',
-                              fontFamily: 'Figtree, sans-serif', flexShrink: 0,
+                              cursor: jaNotificado || enviando ? 'default' : 'pointer',
                               opacity: enviando ? 0.7 : 1,
                             }}
                           >
                             {jaNotificado ? <><Check size={13} /> Notificado</> : enviando ? 'Enviando…' : <><Bell size={13} /> Notificar</>}
-                          </button>
+                          </NotificarButton>
                         </CandidatoRow>
                       );
                     })}
