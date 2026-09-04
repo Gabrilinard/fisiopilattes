@@ -2,7 +2,7 @@ import { MapPin, MonitorPlay, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { useNotification } from '../../../contexts/NotificationContext';
-import { OPCOES_GENERO } from '../../../utils/titulo';
+import { OPCOES_GENERO, getRotuloProfissao } from '../../../utils/titulo';
 import { ESPECIALIDADES_MEDICAS } from '../../Registrar/utils/constantes';
 import { updateInformacoes } from '../api';
 
@@ -56,14 +56,6 @@ const parsePublico = (raw) => {
   const txt = raw.toLowerCase();
   if (txt.includes('todos')) return [...PUBLICOS];
   return PUBLICOS.filter(p => txt.includes(p.toLowerCase()));
-};
-
-const CATEGORIAS_LABEL = {
-  dentista: 'Dentista',
-  nutricionista: 'Nutricionista',
-  fisioterapeuta: 'Fisioterapeuta',
-  fonoaudiologo: 'Fonoaudiólogo',
-  psicologo: 'Psicólogo',
 };
 
 const Toggle = ({ checked, onChange }) => (
@@ -249,7 +241,7 @@ const EditarInformacoes = ({
                   </select>
                 ) : (
                   <div style={{ padding: '10px 14px', background: '#F7F7F4', border: '1.5px solid #E0DFD9', borderRadius: '8px', fontSize: '14px', color: '#1a1a1a' }}>
-                    {CATEGORIAS_LABEL[tipoProfissionalAtual] || tipoProfissionalAtual || 'Não informado'}
+                    {getRotuloProfissao(tipoProfissionalAtual, genero) || 'Não informado'}
                   </div>
                 )}
               </div>

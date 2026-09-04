@@ -187,6 +187,7 @@ const VerVagas = ({ reservas, formatarDataExibicao, formatarHorarioBrasil, user,
         Para cada vaga, sugerimos automaticamente candidatos para preenchê-la — pacientes com urgência aparecem primeiro, seguidos pelos que têm consulta marcada mais para frente.
         Clique em <strong>"Notificar"</strong> para avisar um candidato específico, ou em <strong>"Notificar todos"</strong> para avisar todos de uma vez — o primeiro que aceitar fica com o horário.
         Se mesmo assim o paciente confirmar presença e não comparecer, e isso acontecer em <strong>duas ocasiões</strong>, ele fica <strong>bloqueado por 60 dias</strong> para marcar novas consultas na plataforma.
+        Importante: o sistema não detecta a falta sozinho — você precisa marcar o paciente como <strong>"Ausente"</strong> na tela <strong>Histórico</strong> para que ela seja registrada e contabilizada.
       </p>
     </div>
   );

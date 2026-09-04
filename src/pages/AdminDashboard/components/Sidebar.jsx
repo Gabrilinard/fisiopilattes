@@ -1,6 +1,6 @@
 import { Calendar, CalendarDays, CalendarPlus, ClipboardList, Clock, Home, LogOut, MapPin, Unlock, User, UserCircle, X, Zap } from 'lucide-react';
 import styled from 'styled-components';
-import { getNomeComTitulo } from '../../../utils/titulo';
+import { getNomeComTitulo, getRotuloProfissao } from '../../../utils/titulo';
 
 const SidebarAside = styled.aside`
   width: 260px;
@@ -83,7 +83,7 @@ const Sidebar = ({ user, av, initials, activeScreen, irPara, navigate, logout, s
               {user?.nome ? getNomeComTitulo(user.genero, `${user.nome} ${user.sobrenome || ''}`) : 'Profissional'}
             </p>
             <p style={{ fontSize: '11px', color: '#888', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {user?.tipoProfissional || 'Especialidade'}
+              {getRotuloProfissao(user?.tipoProfissional, user?.genero) || 'Especialidade'}
             </p>
           </div>
         </div>

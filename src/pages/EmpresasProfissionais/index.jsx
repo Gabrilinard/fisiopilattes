@@ -9,6 +9,7 @@ import Header from '../../components/Header';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { getAvatarColor, getInitials } from '../../utils/avatar';
+import { getRotuloProfissao } from '../../utils/titulo';
 import { getProfissionaisByCategoria, getStatusAusencia } from './api';
 
 const DARK_GREEN = '#1C5C40';
@@ -602,7 +603,7 @@ const EmpresasProfissionais = () => {
                           <ProfName>{p.nomeCompleto}</ProfName>
                           <VerifiedIcon><CheckCircle size={16} /></VerifiedIcon>
                         </NameRow>
-                        <ProfSpec>{p.tipoProfissional}</ProfSpec>
+                        <ProfSpec>{getRotuloProfissao(p.tipoProfissional, p.genero)}</ProfSpec>
                         {total > 0 && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                             {[1,2,3,4,5].map(n => (

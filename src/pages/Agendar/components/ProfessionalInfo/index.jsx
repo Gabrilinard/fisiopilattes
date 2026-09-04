@@ -1,6 +1,7 @@
 import styled from 'styled-components';
 import { getAvaliacoesByProfissional, getMediaByProfissional } from '../../api';
 import { useEffect, useState } from 'react';
+import { getRotuloProfissao } from '../../../../utils/titulo';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, Marker, TileLayer } from 'react-leaflet';
@@ -164,7 +165,7 @@ const ProfessionalInfo = ({ profissionalInfo, location, endereco }) => {
           </div>
           {profissionalInfo.tipoProfissional && (
             <p style={{ color: '#444', fontSize: '13px', margin: '4px 0 0', fontWeight: '500' }}>
-              {profissionalInfo.tipoProfissional}
+              {getRotuloProfissao(profissionalInfo.tipoProfissional, profissionalInfo.genero)}
             </p>
           )}
           <p style={{ color: '#555', fontSize: '12px', margin: '6px 0 0', display: 'flex', alignItems: 'center', gap: '5px' }}>

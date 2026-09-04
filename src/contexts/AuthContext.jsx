@@ -24,6 +24,16 @@ export const AuthProvider = ({ children }) => {
           setUser(parsedUser);
           const storedViewMode = localStorage.getItem('viewMode');
           setViewModeState(storedViewMode || parsedUser.tipoUsuario || 'paciente');
+
+          if (parsedUser.tipoProfissional === undefined) {
+            client.get(`/user/${parsedUser.id}`)
+              .then(({ data }) => {
+                const merged = { ...parsedUser, ...data };
+                setUser(merged);
+                localStorage.setItem('user', JSON.stringify(merged));
+              })
+              .catch(() => {});
+          }
         } else {
           localStorage.removeItem('user');
           localStorage.removeItem('token');

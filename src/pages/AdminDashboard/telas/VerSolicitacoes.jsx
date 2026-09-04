@@ -357,7 +357,7 @@ const VerSolicitacoes = ({
             <option value="antigas">Mais antigas</option>
           </select>
         </div>
-;
+
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
           {STATUS_FILTERS.map(f => (
             <Chip key={f.key} active={statusFiltros.has(f.key)} onClick={() => toggleFiltro(statusFiltros, setStatusFiltros, f.key)}>
