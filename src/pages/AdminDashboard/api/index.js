@@ -12,6 +12,8 @@ export const solicitarDados = (id) => client.get(`/usuarios/solicitarDados/${id}
 export const buscarPorCPF = (cpf) => client.get(`/usuarios/buscarPorCPF/${cpf}`);
 export const updateLocalizacao = (id, data) => client.patch(`/usuarios/${id}/localizacao`, data);
 export const updateInformacoes = (id, data) => client.patch(`/usuarios/${id}/informacoes`, data);
+export const excluirPerfilProfissional = (id) => client.delete(`/usuarios/${id}/perfil-profissional`);
+export const excluirConta = (id) => client.delete(`/usuarios/${id}`);
 
 export const getFormularioByReserva = (reservaId) => client.get(`/formularios/reserva/${reservaId}`);
 

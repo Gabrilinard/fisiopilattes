@@ -1,10 +1,12 @@
-import { MapPin, MonitorPlay, Users } from 'lucide-react';
+import { AlertTriangle, MapPin, MonitorPlay, Trash2, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { useAuth } from '../../../contexts/AuthContext';
 import { useNotification } from '../../../contexts/NotificationContext';
 import { OPCOES_GENERO, getRotuloProfissao } from '../../../utils/titulo';
 import { ESPECIALIDADES_MEDICAS } from '../../Registrar/utils/constantes';
-import { updateInformacoes } from '../api';
+import { excluirConta, excluirPerfilProfissional, updateInformacoes } from '../api';
 
 const StickyFooter = styled.div`
   position: fixed;
@@ -108,6 +110,14 @@ const EditarInformacoes = ({
   user,
 }) => {
   const { success, error: showError } = useNotification();
+  const { logout, updateUser: updateAuthUser, setViewMode } = useAuth();
+  const navigate = useNavigate();
+
+  // Exclusão de conta: 'escolher' pede pra decidir entre remover só o lado
+  // profissional ou a conta inteira; 'confirmar' pede a confirmação final.
+  const [excluirEtapa, setExcluirEtapa] = useState(null);
+  const [excluirOpcao, setExcluirOpcao] = useState(null);
+  const [excluindo, setExcluindo] = useState(false);
 
   const tipoProfissionalAtual = editTipoProfissional || user?.tipoProfissional || '';
   const isMedico = ESPECIALIDADES_MEDICAS.includes(tipoProfissionalAtual);
@@ -184,6 +194,31 @@ const EditarInformacoes = ({
     setRegistro(user?.registroProfissional || '');
     setGenero(user?.genero || '');
     setPublicoSel(editPublicoAtendido ? editPublicoAtendido.split(',').map(s => s.trim()).filter(Boolean) : []);
+  };
+
+  const iniciarExclusao = () => { setExcluirEtapa('escolher'); setExcluirOpcao(null); };
+  const cancelarExclusao = () => { setExcluirEtapa(null); setExcluirOpcao(null); };
+  const escolherOpcaoExclusao = (opcao) => { setExcluirOpcao(opcao); setExcluirEtapa('confirmar'); };
+
+  const confirmarExclusao = async () => {
+    if (!user?.id) { showError('Erro ao identificar usuário.'); return; }
+    setExcluindo(true);
+    try {
+      if (excluirOpcao === 'profissional') {
+        await excluirPerfilProfissional(user.id);
+        updateAuthUser({ tipoUsuario: 'paciente', tipoProfissional: null });
+        setViewMode('paciente');
+        success('Perfil profissional removido. Sua conta agora é uma conta de paciente.');
+        navigate('/Conta');
+      } else {
+        await excluirConta(user.id);
+        logout();
+        navigate('/');
+      }
+    } catch (e) {
+      showError(e?.response?.data?.error || 'Erro ao excluir conta.');
+      setExcluindo(false);
+    }
   };
 
   const addFormacao = () => setFormacoes(prev => [...prev, { id: Date.now(), titulo: '', instituicao: '', periodo: '', editing: true }]);
@@ -413,6 +448,79 @@ const EditarInformacoes = ({
               <button onClick={addFormacao} style={{ width: '100%', padding: '12px 20px', background: 'none', border: 'none', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#1B4D3E', cursor: 'pointer', fontFamily: 'Figtree, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 + Adicionar formação
               </button>
+            </div>
+          </div>
+
+          {/* Zona de risco */}
+          <div style={{ ...CARD, border: '1.5px solid #FECACA' }}>
+            <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid #F0EFE9' }}>
+              <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#991B1B' }}>Excluir conta</h2>
+              <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#888' }}>Essa ação é permanente e não pode ser desfeita.</p>
+            </div>
+            <div style={{ padding: '18px 20px' }}>
+              {excluirEtapa === null && (
+                <button
+                  onClick={iniciarExclusao}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: 'none', border: '1.5px solid #FECACA', color: '#C53030', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'Figtree, sans-serif' }}
+                >
+                  <Trash2 size={14} /> Excluir conta
+                </button>
+              )}
+
+              {excluirEtapa === 'escolher' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#555' }}>O que você quer excluir?</p>
+                  <button
+                    onClick={() => escolherOpcaoExclusao('profissional')}
+                    style={{ textAlign: 'left', padding: '12px 14px', background: '#FFF7ED', border: '1.5px solid #FED7AA', borderRadius: '8px', cursor: 'pointer', fontFamily: 'Figtree, sans-serif' }}
+                  >
+                    <p style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#9A3412' }}>Excluir apenas o perfil profissional</p>
+                    <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#9A3412' }}>Sua agenda e dados de profissional somem, mas você continua com sua conta como paciente.</p>
+                  </button>
+                  <button
+                    onClick={() => escolherOpcaoExclusao('completa')}
+                    style={{ textAlign: 'left', padding: '12px 14px', background: '#FFF5F5', border: '1.5px solid #F5C6C6', borderRadius: '8px', cursor: 'pointer', fontFamily: 'Figtree, sans-serif' }}
+                  >
+                    <p style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#991B1B' }}>Excluir a conta inteira</p>
+                    <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#991B1B' }}>Apaga tudo: login, consultas, formulários e anexos, como paciente e como profissional.</p>
+                  </button>
+                  <button
+                    onClick={cancelarExclusao}
+                    style={{ alignSelf: 'flex-start', padding: '6px 4px', background: 'none', border: 'none', color: '#888', fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: 'Figtree, sans-serif' }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
+
+              {excluirEtapa === 'confirmar' && (
+                <div style={{ background: '#FFF5F5', border: '1.5px solid #F5C6C6', borderRadius: '10px', padding: '14px 16px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <AlertTriangle size={16} color="#C53030" style={{ flexShrink: 0, marginTop: '1px' }} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ margin: 0, fontSize: '12.5px', color: '#8B2C2C', lineHeight: '1.5' }}>
+                      {excluirOpcao === 'profissional'
+                        ? 'Tem certeza? Sua agenda, candidatos a vagas e dados profissionais serão apagados permanentemente. Sua conta continua existindo como paciente.'
+                        : 'Tem certeza? Todos os seus dados (consultas, formulários, notificações e anexos) serão apagados permanentemente. Essa ação não pode ser desfeita.'}
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                      <button
+                        onClick={confirmarExclusao}
+                        disabled={excluindo}
+                        style={{ padding: '7px 14px', background: '#C53030', color: 'white', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: excluindo ? 'default' : 'pointer', fontFamily: 'Figtree, sans-serif', opacity: excluindo ? 0.6 : 1 }}
+                      >
+                        {excluindo ? 'Excluindo...' : excluirOpcao === 'profissional' ? 'Sim, excluir perfil profissional' : 'Sim, excluir minha conta'}
+                      </button>
+                      <button
+                        onClick={cancelarExclusao}
+                        disabled={excluindo}
+                        style={{ padding: '7px 14px', background: 'none', border: '1.5px solid #E0DFD9', color: '#555', borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: 'Figtree, sans-serif' }}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
